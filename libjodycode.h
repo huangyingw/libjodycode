@@ -25,6 +25,11 @@ extern "C" {
 #define LIBJODYCODE_API_FEATURE_LEVEL 2
 #define LIBJODYCODE_VER               "3.1"
 #define LIBJODYCODE_VERDATE           "2023-07-02"
+#ifdef UNICODE
+ #define LIBJODYCODE_WINDOWS_UNICODE  1
+#else
+ #define LIBJODYCODE_WINDOWS_UNICODE  0
+#endif
 
 /* API sub-version table
  * This table tells programs about API changes so that programs can detect
@@ -190,6 +195,7 @@ extern const char *jc_verdate;
 extern const int jc_api_version;
 extern const int jc_api_featurelevel;
 extern const int jc_jodyhash_version;
+extern const int jc_windows_unicode;
 /* This table is used for API compatibility checks */
 extern const unsigned char jc_api_versiontable[];
 

@@ -11,6 +11,7 @@ const char *jc_verdate = LIBJODYCODE_VERDATE;
 const int jc_api_version = LIBJODYCODE_API_VERSION;
 const int jc_api_featurelevel = LIBJODYCODE_API_FEATURE_LEVEL;
 const int jc_jodyhash_version = JODY_HASH_VERSION;
+const int jc_windows_unicode = LIBJODYCODE_WINDOWS_UNICODE;
 
 /* API sub-version info array, terminated with 0
  * Valid versions are 1-254. New API sections MUST be added to the end. The
