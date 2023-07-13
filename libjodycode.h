@@ -230,8 +230,52 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 
 /*** win_unicode ***/
 
-/* Print strings in Unicode mode on Windows */
+#if defined _WIN32 || defined __WIN32 || defined ON_WINDOWS
+ #ifdef UNICODE
+  #define JC_FILE_MODE_RDONLY L"rb"
+  #define JC_FILE_MODE_WRONLY L"wb"
+  #define JC_FILE_MODE_RW L"w+b"
+  #define JC_FILE_MODE_RW_EXISTING L"r+b"
+  #define JC_FILE_MODE_WRONLY_APPEND L"ab"
+  #define JC_FILE_MODE_RW_APPEND L"a+b"
+  #define JC_FILE_MODE_RDONLY_SEQ L"rbS"
+  #define JC_FILE_MODE_WRONLY_SEQ L"wbS"
+  #define JC_FILE_MODE_RW_SEQ L"w+bS"
+  #define JC_FILE_MODE_RW_EXISTING_SEQ L"r+bS"
+  #define JC_FILE_MODE_WRONLY_APPEND_SEQ L"abS"
+  #define JC_FILE_MODE_RW_APPEND_SEQ L"a+bS"
+ #else /* Windows, not UNICODE */
+  #define JC_FILE_MODE_RDONLY "rb"
+  #define JC_FILE_MODE_WRONLY "wb"
+  #define JC_FILE_MODE_RW "w+b"
+  #define JC_FILE_MODE_RW_EXISTING "r+b"
+  #define JC_FILE_MODE_WRONLY_APPEND "ab"
+  #define JC_FILE_MODE_RW_APPEND "a+b"
+  #define JC_FILE_MODE_RDONLY_SEQ "rbS"
+  #define JC_FILE_MODE_WRONLY_SEQ "wbS"
+  #define JC_FILE_MODE_RW_SEQ "w+bS"
+  #define JC_FILE_MODE_RW_EXISTING_SEQ "r+bS"
+  #define JC_FILE_MODE_WRONLY_APPEND_SEQ "abS"
+  #define JC_FILE_MODE_RW_APPEND_SEQ "a+bS"
+ #endif
+#else /* Not Windows */
+ #define JC_FILE_MODE_RDONLY "rb"
+ #define JC_FILE_MODE_WRONLY "wb"
+ #define JC_FILE_MODE_RW "w+b"
+ #define JC_FILE_MODE_RW_EXISTING "r+b"
+ #define JC_FILE_MODE_WRONLY_APPEND "ab"
+ #define JC_FILE_MODE_RW_APPEND "a+b"
+ #define JC_FILE_MODE_RDONLY_SEQ "rb"
+ #define JC_FILE_MODE_WRONLY_SEQ "wb"
+ #define JC_FILE_MODE_RW_SEQ "w+b"
+ #define JC_FILE_MODE_RW_EXISTING_SEQ "r+b"
+ #define JC_FILE_MODE_WRONLY_APPEND_SEQ "ab"
+ #define JC_FILE_MODE_RW_APPEND_SEQ "a+b"
+#endif /* Windows */
+
+/* Cross-platform help for strings in Unicode mode on Windows */
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
+extern FILE *jc_fopen(const char *pathname, const char *mode);
 
 #ifdef UNICODE
  extern void jc_slash_convert(char *path);

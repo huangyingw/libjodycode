@@ -80,6 +80,7 @@ extern int jc_widearg_to_argv(int argc, wchar_t **wargv, char **argv)
 
 #endif /* UNICODE */
 
+
 /* Print a string that is wide on Windows but normal on POSIX */
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr)
 {
@@ -105,5 +106,31 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 		else return fprintf(stream, "%s%s", str, cr == 1 ? "\n" : "");
 #ifdef UNICODE
 	}
+#endif
+}
+
+
+/* Open a file, converting the name for Unicode on Windows if necessary */
+extern FILE *jc_fopen(const char *pathname, const char *mode)
+{
+#ifdef UNICODE
+	FILE *fp;
+	wpath_t *widename;
+#endif
+
+	if (unlikely(pathname == NULL || mode == NULL)) return NULL;
+
+#ifdef UNICODE
+	widename = (wpath_t *)malloc(PATH_MAX);
+	if (unlikely(widename == NULL)) return NULL;
+        if (unlikely(!M2W(pathname, widename))) {
+		free(widename);
+		return NULL;
+	}
+	fp = _wfopen(widename, mode);
+	free(widename);
+	return fp;
+#else
+	return fopen(pathname, mode);
 #endif
 }
