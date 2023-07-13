@@ -238,6 +238,7 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 
 #if defined _WIN32 || defined __WIN32 || defined ON_WINDOWS
  #ifdef UNICODE
+  #define JC_WCHAR_T wchar_t
   #define JC_FILE_MODE_RDONLY L"rb"
   #define JC_FILE_MODE_WRONLY L"wb"
   #define JC_FILE_MODE_RW L"w+b"
@@ -251,6 +252,7 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
   #define JC_FILE_MODE_WRONLY_APPEND_SEQ L"abS"
   #define JC_FILE_MODE_RW_APPEND_SEQ L"a+bS"
  #else /* Windows, not UNICODE */
+  #define JC_WCHAR_T char
   #define JC_FILE_MODE_RDONLY "rb"
   #define JC_FILE_MODE_WRONLY "wb"
   #define JC_FILE_MODE_RW "w+b"
@@ -265,6 +267,7 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
   #define JC_FILE_MODE_RW_APPEND_SEQ "a+bS"
  #endif
 #else /* Not Windows */
+ #define JC_WCHAR_T char
  #define JC_FILE_MODE_RDONLY "rb"
  #define JC_FILE_MODE_WRONLY "wb"
  #define JC_FILE_MODE_RW "w+b"
@@ -281,7 +284,7 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 
 /* Cross-platform help for strings in Unicode mode on Windows */
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
-extern FILE *jc_fopen(const char *pathname, const char *mode);
+extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 
 #ifdef UNICODE
  extern void jc_slash_convert(char *path);

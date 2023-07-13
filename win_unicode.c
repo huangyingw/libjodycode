@@ -111,17 +111,17 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 
 
 /* Open a file, converting the name for Unicode on Windows if necessary */
-extern FILE *jc_fopen(const char *pathname, const char *mode)
+extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 {
 #ifdef UNICODE
 	FILE *fp;
-	wpath_t *widename;
+	wchar_t *widename;
 #endif
 
 	if (unlikely(pathname == NULL || mode == NULL)) return NULL;
 
 #ifdef UNICODE
-	widename = (wpath_t *)malloc(PATH_MAX);
+	widename = (wchar_t *)malloc(PATH_MAX);
 	if (unlikely(widename == NULL)) return NULL;
         if (unlikely(!M2W(pathname, widename))) {
 		free(widename);
