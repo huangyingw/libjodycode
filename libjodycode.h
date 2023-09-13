@@ -129,7 +129,7 @@ extern int jc_print_error(int errnum);
 
 /* Version increments when algorithm changes incompatibly */
 #ifndef JODY_HASH_VERSION
-#define JODY_HASH_VERSION 7
+ #define JODY_HASH_VERSION 7
 #endif
 
 /* Width of a jody_hash */
@@ -266,6 +266,10 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
   #define JC_FILE_MODE_WRONLY_APPEND_SEQ "abS"
   #define JC_FILE_MODE_RW_APPEND_SEQ "a+bS"
  #endif
+ #define JC_F_OK 0
+ #define JC_R_OK 4
+ #define JC_W_OK 2
+ #define JC_X_OK 6
 #else /* Not Windows */
  #define JC_WCHAR_T char
  #define JC_FILE_MODE_RDONLY "rb"
@@ -280,6 +284,10 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
  #define JC_FILE_MODE_RW_EXISTING_SEQ "r+b"
  #define JC_FILE_MODE_WRONLY_APPEND_SEQ "ab"
  #define JC_FILE_MODE_RW_APPEND_SEQ "a+b"
+ #define JC_F_OK F_OK
+ #define JC_R_OK R_OK
+ #define JC_W_OK W_OK
+ #define JC_X_OK X_OK
 #endif /* Windows */
 
 /* Cross-platform help for strings in Unicode mode on Windows */
