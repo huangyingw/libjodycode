@@ -283,13 +283,15 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 #endif /* Windows */
 
 /* Cross-platform help for strings in Unicode mode on Windows */
-extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
+extern int jc_access(const char *pathname, int mode);
 extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
+extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
 
 #ifdef UNICODE
  extern void jc_slash_convert(char *path);
  extern void jc_set_output_modes(unsigned int modes);
- extern int jc_widearg_to_argv(int argc, wchar_t **wargv, char **argv);
+ extern int jc_string_to_wstring(const char *string, JC_WCHAR_T **wstring);
+ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv);
 #else
  #define jc_slash_convert(a)
 #endif /* UNICODE */

@@ -29,7 +29,7 @@ libjodycode \- shared code used by several tools written by Jody Bruchon
 .SS "OOM (out-of-memory) API"
 .nf
 .BI "void jc_oom(const char * const restrict " msg ")"
-.BI "void jc_nullptr(const char * restrict " func ")"a
+.BI "void jc_nullptr(const char * restrict " func ")"
 
 .SS "Paths API"
 .nf
@@ -72,10 +72,13 @@ libjodycode \- shared code used by several tools written by Jody Bruchon
 
 .SS "Windows Unicode API"
 .nf
-.BI "int jc_fwprint(FILE * const restrict " stream ", const char * const restrict " str ", const int " cr ")"
+.BI "int jc_access(const char *" pathname ", int " mode ")"
+.BI "FILE *jc_fopen(const char *" pathname ", const JC_WCHAR_T *" mode ")"
 .BI "void jc_slash_convert(char *" path ")"
 .BI "void jc_set_output_modes(unsigned int " modes ")"
-.BI "int jc_widearg_to_argv(int " argc ", wchar_t **" wargv ", char **" argv ")"
+.BI "int jc_string_to_wstring(const char *" string ", JC_WCHAR_T **" wstring ")"
+.BI "int jc_fwprint(FILE * const restrict " stream ", const char * const restrict " str ", const int " cr ")"
+.BI "int jc_widearg_to_argv(int " argc ", JC_WCHAR_T **" wargv ", char **" argv ")"
 
 .PP
 .SH DESCRIPTION

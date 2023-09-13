@@ -4,9 +4,10 @@
  * Released under The MIT License
  */
 
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 
@@ -16,7 +17,6 @@
 #include <io.h>
 static int out_mode = _O_TEXT;
 static int err_mode = _O_TEXT;
-static wchar_t wstr[PATHBUF_SIZE];
 
 /* Convert slashes to backslashes in a file path */
 extern void jc_slash_convert(char *path)
@@ -61,7 +61,7 @@ extern void jc_set_output_modes(unsigned int modes)
 
 
 /* Copy Windows wide character arguments to UTF-8 */
-extern int jc_widearg_to_argv(int argc, wchar_t **wargv, char **argv)
+extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 {
 	static char temp[PATHBUF_SIZE * 2];
 	int len;
@@ -87,18 +87,21 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 #ifdef UNICODE
 	int retval;
 	int stream_mode = out_mode;
+	JC_WCHAR_T *wstr;
 
 	if (stream == stderr) stream_mode = err_mode;
 
 	if (stream_mode == _O_U16TEXT) {
 		/* Convert to wide string and send to wide console output */
-		if (!M2W(str, wstr)) return -7;
+		wstr = string_to_wstring(str, &wstr);
+		if (wstr == NULL) return -7;
 		fflush(stream);
 		_setmode(_fileno(stream), stream_mode);
 		if (cr == 2) retval = fwprintf(stream, L"%S%C", wstr, 0);
 		else retval = fwprintf(stream, L"%S%S", wstr, cr == 1 ? L"\n" : L"");
 		fflush(stream);
 		_setmode(_fileno(stream), _O_TEXT);
+		free(wstr);
 		return retval;
 	} else {
 #endif
@@ -115,16 +118,17 @@ extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 {
 #ifdef UNICODE
 	FILE *fp;
-	wchar_t *widename;
+	JC_WCHAR_T *widename;
 #endif
 
-	if (unlikely(pathname == NULL || mode == NULL)) return NULL;
+	if (unlikely(pathname == NULL || mode == NULL)) {
+		errno = EFAULT;
+		return NULL;
+	}
 
 #ifdef UNICODE
-	widename = (wchar_t *)malloc(PATH_MAX);
-	if (unlikely(widename == NULL)) return NULL;
-        if (unlikely(!M2W(pathname, widename))) {
-		free(widename);
+	if (string_to_wstring(pathname, widename) != 0) {
+		errno = ENOMEM;
 		return NULL;
 	}
 	fp = _wfopen(widename, mode);
@@ -134,3 +138,44 @@ extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 	return fopen(pathname, mode);
 #endif
 }
+
+
+/* Check file exist/read/write, converting for Windows if necessary */
+extern int jc_access(const char *pathname, int mode)
+{
+#ifdef UNICODE
+	int retval;
+	JC_WCHAR_T *widename;
+#endif
+
+	if (unlikely(pathname == NULL)) {
+		errno = EFAULT;
+		return -1;
+	}
+
+#ifdef UNICODE
+	if (string_to_wstring(pathname, widename) != 0) {
+		errno = ENOMEM;
+		return -1;
+	}
+	retval = _waccess(widename, mode);
+	free(widename);
+	return retval;
+#else
+	return access(pathname, mode);
+#endif
+}
+
+
+#ifdef UNICODE
+extern int jc_string_to_wstring(const char *string, JC_WCHAR_T **wstring)
+{
+	string = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
+	if (unlikely(wstring == NULL)) return -1;
+	if (unlikely(!M2W(string, wstring))) {
+		free(wstring);
+		return -1;
+	}
+	return 0;
+}
+#endif

@@ -49,12 +49,14 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
   uint64_t timetemp;
 
 #ifdef UNICODE
-  static wchar_t wname2[WPATH_MAX];
+  JC_WCHAR_T *widename;
 
   if (unlikely(!buf)) return -127;
-  if (!M2W(filename,wname2)) return -126;
-  hFile = CreateFileW(wname2, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+  widename = string_to_wstring(filename, &widename);
+  if (widename == NULL) return -126;
+  hFile = CreateFileW(widename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING,
 		  FILE_FLAG_BACKUP_SEMANTICS, NULL);
+  free(widename);
 #else
   if (unlikely(!buf)) return -127;
   hFile = CreateFile(filename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING,
