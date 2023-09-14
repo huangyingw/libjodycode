@@ -102,7 +102,7 @@ is it a regular file?
 .BI "FILE *jc_fopen(const char *" pathname ", const JC_WCHAR_T *" mode ")"
 .BI "void jc_slash_convert(char *" path ")"
 .BI "void jc_set_output_modes(unsigned int " modes ")"
-.BI "int jc_string_to_wstring(const char *" string ", JC_WCHAR_T **" wstring ")"
+.BI "int jc_string_to_wstring(const char * const restrict " string ", JC_WCHAR_T **" wstring ")"
 .BI "int jc_fwprint(FILE * const restrict " stream ", const char * const restrict " str ", const int " cr ")"
 .BI "int jc_widearg_to_argv(int " argc ", JC_WCHAR_T **" wargv ", char **" argv ")"
 

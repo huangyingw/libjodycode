@@ -52,8 +52,7 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
   JC_WCHAR_T *widename;
 
   if (unlikely(!buf)) return -127;
-  widename = string_to_wstring(filename, &widename);
-  if (widename == NULL) return -126;
+  if (jc_string_to_wstring(filename, &widename) != 0) return -126;
   hFile = CreateFileW(widename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING,
 		  FILE_FLAG_BACKUP_SEMANTICS, NULL);
   free(widename);

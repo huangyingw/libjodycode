@@ -93,8 +93,7 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 
 	if (stream_mode == _O_U16TEXT) {
 		/* Convert to wide string and send to wide console output */
-		wstr = string_to_wstring(str, &wstr);
-		if (wstr == NULL) return -7;
+		if(jc_string_to_wstring(str, &wstr) != 0) return -7;
 		fflush(stream);
 		_setmode(_fileno(stream), stream_mode);
 		if (cr == 2) retval = fwprintf(stream, L"%S%C", wstr, 0);
@@ -127,7 +126,7 @@ extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 	}
 
 #ifdef UNICODE
-	if (string_to_wstring(pathname, widename) != 0) {
+	if (jc_string_to_wstring(pathname, &widename) != 0) {
 		errno = ENOMEM;
 		return NULL;
 	}
@@ -154,7 +153,7 @@ extern int jc_access(const char *pathname, int mode)
 	}
 
 #ifdef UNICODE
-	if (string_to_wstring(pathname, widename) != 0) {
+	if (jc_string_to_wstring(pathname, &widename) != 0) {
 		errno = ENOMEM;
 		return -1;
 	}
@@ -168,13 +167,14 @@ extern int jc_access(const char *pathname, int mode)
 
 
 #ifdef UNICODE
-extern int jc_string_to_wstring(const char *string, JC_WCHAR_T **wstring)
+extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
 {
-	string = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
 	if (unlikely(wstring == NULL)) return -1;
-	if (unlikely(!M2W(string, wstring))) {
-		free(wstring);
-		return -1;
+	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
+	if (unlikely(*wstring == NULL)) return -2;
+	if (unlikely(!M2W(string, *wstring))) {
+		free(*wstring);
+		return -3;
 	}
 	return 0;
 }

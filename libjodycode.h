@@ -298,7 +298,7 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 #ifdef UNICODE
  extern void jc_slash_convert(char *path);
  extern void jc_set_output_modes(unsigned int modes);
- extern int jc_string_to_wstring(const char *string, JC_WCHAR_T **wstring);
+ extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring);
  extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv);
 #else
  #define jc_slash_convert(a)
