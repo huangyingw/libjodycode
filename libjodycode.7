@@ -143,6 +143,15 @@ unistd.h W_OK
 .IP JC_X_OK 10
 unistd.h X_OK
 
+.SS "Windows Unicode conversion shortcut definitions"
+.nf
+.BI "M2W(char *" a ", JC_WCHAR_T *" b ")"
+convert string a to wide string b using MultiByteToWideChar()
+
+.BI "W2M(JC_WCHAR_T *" a ", char *" b ")"
+convert wide string a to normal string b using WideCharToMultiByte()
+
+
 .PP
 .SH DESCRIPTION
 libjodycode is a software code library containing code shared among several of
