@@ -224,7 +224,7 @@ extern int jc_remove(const char *pathname)
 extern int jc_link(const char *path1, const char *path2)
 {
 #ifdef ON_WINDOWS
-	int retval = -1;
+	int retval = 0;
 #ifdef UNICODE
 	JC_WCHAR_T *widename1, *widename2;
 #endif
@@ -241,10 +241,10 @@ extern int jc_link(const char *path1, const char *path2)
 		errno = ENOMEM;
 		return -1;
 	}
-	if (CreateHardLinkW((LPCWSTR)widename2, (LPCWSTR)widename1, NULL) == TRUE) retval = 0;
+	if (CreateHardLinkW((LPCWSTR)widename2, (LPCWSTR)widename1, NULL) != TRUE) retval = -1;
 	free(widename1); free(widename2);
  #else
-	if (CreateHardLink(path2, path1, NULL) == TRUE) retval = 0;
+	if (CreateHardLink(path2, path1, NULL) != TRUE) retval = -1;
  #endif  /* UNICODE */
 	return retval;
 #else
