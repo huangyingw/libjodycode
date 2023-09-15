@@ -185,7 +185,7 @@ extern int jc_rename(const char * const restrict oldpath, const char * restrict 
 		return -1;
 	}
         retval = MoveFileW(wideold, widenew) ? 0 : -1;
-	free(widename);
+	free(wideold); free(widenew);
 	return retval;
 #else
         return rename(oldpath, newpath);
