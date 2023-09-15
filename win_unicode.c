@@ -184,13 +184,74 @@ extern int jc_rename(const char * const restrict oldpath, const char * restrict 
 		errno = ENOMEM;
 		return -1;
 	}
-        retval = MoveFileW(wideold, widenew) ? 0 : -1;
+	retval = MoveFileW(wideold, widenew) ? 0 : -1;
 	free(wideold); free(widenew);
 	return retval;
 #else
-        return rename(oldpath, newpath);
+	return rename(oldpath, newpath);
 #endif
 }
+
+
+/* Delete a file, converting for Windows if necessary */
+extern int jc_remove(const char *pathname)
+{
+#ifdef UNICODE
+	int retval;
+	JC_WCHAR_T *widename;
+#endif
+
+	if (unlikely(pathname == NULL)) {
+		errno = EFAULT;
+		return -1;
+	}
+
+#ifdef UNICODE
+	if (jc_string_to_wstring(pathname, &widename) != 0) {
+		errno = ENOMEM;
+		return -1;
+	}
+	retval = DeleteFileW(widename) ? 0 : 1;
+	free(widename);
+	return retval;
+#else
+	return remove(pathname);
+#endif
+}
+
+
+/* Hard link a file, converting for Windows if necessary */
+extern int jc_link(const char *path1, const char *path2)
+{
+#ifdef ON_WINDOWS
+	int retval = -1;
+#ifdef UNICODE
+	JC_WCHAR_T *widename1, *widename2;
+#endif
+#endif
+
+	if (unlikely(path1 == NULL || path2 == NULL)) {
+		errno = EFAULT;
+		return -1;
+	}
+
+#ifdef ON_WINDOWS
+ #ifdef UNICODE
+	if (jc_string_to_wstring(path1, &widename1) != 0 || jc_string_to_wstring(path2, &widename2) != 0) {
+		errno = ENOMEM;
+		return -1;
+	}
+	if (CreateHardLinkW((LPCWSTR)widename2, (LPCWSTR)widename1, NULL) == TRUE) retval = 0;
+	free(widename1); free(widename2);
+ #else
+	if (CreateHardLink(path2, path1, NULL) == TRUE) retval = 0;
+ #endif  /* UNICODE */
+	return retval;
+#else
+	return link(path1, path2);
+#endif  /* ON_WINDOWS */
+}
+
 
 #ifdef UNICODE
 /* Copy a string to a wide string - wstring must be freed by the caller */

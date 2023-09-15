@@ -293,7 +293,9 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 /* Cross-platform help for strings in Unicode mode on Windows */
 extern int jc_access(const char *pathname, int mode);
 extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
+extern int jc_link(const char *path1, const char *path2);
 extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath);
+extern int jc_remove(const char *pathname);
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
 
 #ifdef UNICODE
