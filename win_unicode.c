@@ -166,7 +166,34 @@ extern int jc_access(const char *pathname, int mode)
 }
 
 
+/* Rename a file, converting for Windows if necessary */
+extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath)
+{
 #ifdef UNICODE
+	int retval;
+	JC_WCHAR_T *wideold, *widenew;
+#endif
+
+	if (unlikely(oldpath == NULL || newpath == NULL)) {
+		errno = EFAULT;
+		return -1;
+	}
+
+#ifdef UNICODE
+	if (unlikely(jc_string_to_wstring(oldpath, &wideold) != 0 || jc_string_to_wstring(newpath, &widenew) != 0)) {
+		errno = ENOMEM;
+		return -1;
+	}
+        retval = MoveFileW(wideold, widenew) ? 0 : -1;
+	free(widename);
+	return retval;
+#else
+        return rename(oldpath, newpath);
+#endif
+}
+
+#ifdef UNICODE
+/* Copy a string to a wide string - wstring must be freed by the caller */
 extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
 {
 	if (unlikely(wstring == NULL)) return -1;

@@ -22,9 +22,9 @@ extern "C" {
  * supports the used interfaces should be chosen by programs that check
  * version information for compatibility. See README for more information. */
 #define LIBJODYCODE_API_VERSION       3
-#define LIBJODYCODE_API_FEATURE_LEVEL 3
-#define LIBJODYCODE_VER               "3.1"
-#define LIBJODYCODE_VERDATE           "2023-07-02"
+#define LIBJODYCODE_API_FEATURE_LEVEL 4
+#define LIBJODYCODE_VER               "3.2"
+#define LIBJODYCODE_VERDATE           "2023-09-13"
 #ifdef UNICODE
  #define LIBJODYCODE_WINDOWS_UNICODE  1
 #else
@@ -293,6 +293,7 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 /* Cross-platform help for strings in Unicode mode on Windows */
 extern int jc_access(const char *pathname, int mode);
 extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
+extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath);
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
 
 #ifdef UNICODE
