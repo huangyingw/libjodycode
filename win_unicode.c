@@ -17,6 +17,7 @@
 #include <io.h>
 static int out_mode = _O_TEXT;
 static int err_mode = _O_TEXT;
+int jc_errno;
 
 /* Convert slashes to backslashes in a file path */
 extern void jc_slash_convert(char *path)
@@ -69,10 +70,13 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 	if (unlikely(!argv)) return -6;
 	for (int counter = 0; counter < argc; counter++) {
 		len = W2M(wargv[counter], &temp);
-		if (unlikely(len < 1)) return -7;
+		if (unlikely(len < 1)) {
+			jc_errno = GetLastError();
+			return -7;
+		}
 
 		argv[counter] = (char *)malloc((size_t)len + 1);
-		if (unlikely(!argv[counter])) jc_oom("widearg_to_argv()");
+		if (unlikely(!argv[counter])) return -9;
 		strncpy(argv[counter], temp, (size_t)len + 1);
 	}
 	return 0;
@@ -121,13 +125,13 @@ extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 #endif
 
 	if (unlikely(pathname == NULL || mode == NULL)) {
-		errno = EFAULT;
+		jc_errno = EFAULT;
 		return NULL;
 	}
 
 #ifdef UNICODE
 	if (jc_string_to_wstring(pathname, &widename) != 0) {
-		errno = ENOMEM;
+		jc_errno = ENOMEM;
 		return NULL;
 	}
 	fp = _wfopen(widename, mode);
@@ -148,13 +152,13 @@ extern int jc_access(const char *pathname, int mode)
 #endif
 
 	if (unlikely(pathname == NULL)) {
-		errno = EFAULT;
+		jc_errno = EFAULT;
 		return -1;
 	}
 
 #ifdef UNICODE
 	if (jc_string_to_wstring(pathname, &widename) != 0) {
-		errno = ENOMEM;
+		jc_errno = ENOMEM;
 		return -1;
 	}
 	retval = _waccess(widename, mode);
@@ -175,13 +179,13 @@ extern int jc_rename(const char * const restrict oldpath, const char * restrict 
 #endif
 
 	if (unlikely(oldpath == NULL || newpath == NULL)) {
-		errno = EFAULT;
+		jc_errno = EFAULT;
 		return -1;
 	}
 
 #ifdef UNICODE
 	if (unlikely(jc_string_to_wstring(oldpath, &wideold) != 0 || jc_string_to_wstring(newpath, &widenew) != 0)) {
-		errno = ENOMEM;
+		jc_errno = ENOMEM;
 		return -1;
 	}
 	retval = MoveFileW(wideold, widenew) ? 0 : -1;
@@ -202,13 +206,13 @@ extern int jc_remove(const char *pathname)
 #endif
 
 	if (unlikely(pathname == NULL)) {
-		errno = EFAULT;
+		jc_errno = EFAULT;
 		return -1;
 	}
 
 #ifdef UNICODE
 	if (jc_string_to_wstring(pathname, &widename) != 0) {
-		errno = ENOMEM;
+		jc_errno = ENOMEM;
 		return -1;
 	}
 	retval = DeleteFileW(widename) ? 0 : 1;
@@ -231,14 +235,14 @@ extern int jc_link(const char *path1, const char *path2)
 #endif
 
 	if (unlikely(path1 == NULL || path2 == NULL)) {
-		errno = EFAULT;
+		jc_errno = EFAULT;
 		return -1;
 	}
 
 #ifdef ON_WINDOWS
  #ifdef UNICODE
 	if (jc_string_to_wstring(path1, &widename1) != 0 || jc_string_to_wstring(path2, &widename2) != 0) {
-		errno = ENOMEM;
+		jc_errno = ENOMEM;
 		return -1;
 	}
 	if (CreateHardLinkW((LPCWSTR)widename2, (LPCWSTR)widename1, NULL) != TRUE) retval = -1;
@@ -259,10 +263,10 @@ extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T *
 {
 	if (unlikely(wstring == NULL)) return -1;
 	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
-	if (unlikely(*wstring == NULL)) return -2;
+	if (unlikely(*wstring == NULL)) return -9;
 	if (unlikely(!M2W(string, *wstring))) {
 		free(*wstring);
-		return -3;
+		return -7;
 	}
 	return 0;
 }

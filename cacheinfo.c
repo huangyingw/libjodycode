@@ -7,6 +7,7 @@
  * Unified caches populate l1/l2/l3; split caches populate lXi/lXd instead
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

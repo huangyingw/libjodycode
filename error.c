@@ -13,19 +13,20 @@ struct jc_error {
 };
 
 
-#define JC_ERRCNT 9
+#define JC_ERRCNT 10
 static const int errcnt = JC_ERRCNT;
 static const struct jc_error jc_error_list[JC_ERRCNT + 1] = {
 	{ "no_error",    "success" },  // 0 - not a real error
-	{ "null_param",  "get_relative_name has NULL parameter" },  // 1
+	{ "null_param",  "function got a bad NULL parameter" },  // 1
 	{ "getcwd",      "couldn't get the current directory" },  // 2
 	{ "cdotdot",     "jc_collapse_dotdot() call failed" },  // 3
 	{ "grn_dir_end", "get_relative_name() result has directory at end" },  // 4
 	{ "bad_errnum",  "invalid error number" },  // 5
 	{ "bad_argv",    "bad argv pointer" },  // 6
-	{ "wc2mb_fail",  "WideCharToMultiByte() failed" },  // 7
+	{ "mb_wc_fail",  "a multibyte/wide char conversion failed" },  // 7
 	{ "alarm_fail",  "alarm call failed" },  // 8
-	{ NULL, NULL },  // 9
+	{ "alloc_fail",  "memory allocation failed" },  // 9
+	{ NULL, NULL },  // 10
 };
 
 

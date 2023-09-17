@@ -8,6 +8,8 @@
  #define _WIN32_WINNT 0x0500
  #define WIN32_LEAN_AND_MEAN
  #include <windows.h>
+#else
+ #include <errno.h>
 #endif
 
 #include <signal.h>
@@ -43,8 +45,10 @@ extern int jc_start_alarm(const unsigned int seconds, const int repeat)
 	unsigned int period = 0;
 
 	if (repeat != 0) period = secs;
-	if (!CreateTimerQueueTimer(&hTimer, NULL, (WAITORTIMERCALLBACK)jc_catch_alarm, 0, secs, period, 0))
+	if (!CreateTimerQueueTimer(&hTimer, NULL, (WAITORTIMERCALLBACK)jc_catch_alarm, 0, secs, period, 0)) {
+		jc_errno = GetLastError();
 		return -8;
+	}
 	jc_alarm_ring++;
 	return 0;
 }
@@ -52,7 +56,10 @@ extern int jc_start_alarm(const unsigned int seconds, const int repeat)
 
 extern int jc_stop_alarm(void)
 {
-	if (CloseHandle(hTimer) == 0) return -8;
+	if (CloseHandle(hTimer) == 0) {
+		jc_errno = GetLastError();
+		return -8;
+	}
 	return 0;
 }
 
@@ -74,7 +81,10 @@ extern int jc_start_alarm(const unsigned int seconds, const int repeat)
 	memset(&sa_run, 0, sizeof(struct sigaction));
 	sa_run.sa_handler = jc_catch_alarm;
 	if (repeat != 0) jc_alarm_repeat = 1;
-	if (sigaction(SIGALRM, &sa_run, NULL) != 0) return -8;
+	if (sigaction(SIGALRM, &sa_run, NULL) != 0) {
+		jc_errno = errno;
+		return -8;
+	}
 	alarm(seconds);
 	return 0;
 }
@@ -88,7 +98,10 @@ extern int jc_stop_alarm(void)
 	memset(&sa_stop, 0, sizeof(struct sigaction));
 	sa_stop.sa_handler = SIG_IGN;
 	jc_alarm_repeat = 0;
-	if (sigaction(SIGALRM, &sa_stop, NULL) != 0) return -8;
+	if (sigaction(SIGALRM, &sa_stop, NULL) != 0) {
+		jc_errno = errno;
+		return -8;
+	}
 	return 0;
 }
 #endif /* ON_WINDOWS */
