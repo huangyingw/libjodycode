@@ -36,11 +36,12 @@ jc_strneq:1
 jc_strtoepoch:1
 
 # version
-jc_version:1
-jc_verdate:1
-jc_api_versiontable:1
-jc_api_version:1
-jc_jodyhash_version:1
+char *jc_version:1
+char *jc_verdate:1
+int jc_api_versiontable:1
+int jc_api_version:1
+int jc_jodyhash_version:1
+int jc_windows_unicode:3
 
 # win_stat
 struct jc_winstat:1
@@ -49,6 +50,13 @@ jc_nttime_to_unixtime:1
 jc_unixtime_to_nttime:1
 
 # win_unicode
-jc_set_output_modes:1
+int jc_errno:4
+jc_access:4
+jc_fopen:4
 jc_fwprint:1
+jc_link:4
+jc_rename:4
+jc_remove:4
+jc_string_to_wstring:4
+jc_set_output_modes:1
 jc_widearg_to_argv:1
