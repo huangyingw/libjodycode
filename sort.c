@@ -20,7 +20,7 @@ extern int jc_numeric_sort(char * restrict c1,
   int precompare;
   char *rewind1, *rewind2;
 
-  if (unlikely(c1 == NULL || c2 == NULL)) return -99;
+  if (unlikely(c1 == NULL || c2 == NULL)) return JC_ENUMSORT;
 
   /* Numerically correct sort */
   while (unlikely(*c1 != '\0' && *c2 != '\0')) {

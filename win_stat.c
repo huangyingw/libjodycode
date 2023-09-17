@@ -51,15 +51,15 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 	BY_HANDLE_FILE_INFORMATION bhfi;
 	uint64_t timetemp;
 
+	if (unlikely(!buf)) return JC_ENULL;
+
 #ifdef UNICODE
 	JC_WCHAR_T *widename;
 
-	if (unlikely(!buf)) return -127;
-	if (jc_string_to_wstring(filename, &widename) != 0) return -126;
+	if (jc_string_to_wstring(filename, &widename) != 0) return JC_EALLOC;
 	hFile = CreateFileW(widename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	free(widename);
 #else
-	if (unlikely(!buf)) return -127;
 	hFile = CreateFile(filename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #endif
 
@@ -84,11 +84,11 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 failure:
 	jc_errno = GetLastError();
 	CloseHandle(hFile);
-	return -1;
+	return JC_EWIN32API;
 failure2:
 	jc_errno = GetLastError();
 	CloseHandle(hFile);
-	return -2;
+	return JC_EWIN32API;
 }
 
 #endif /* ON_WINDOWS */

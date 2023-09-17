@@ -7,17 +7,19 @@
 #include <stdio.h>
 #include "libjodycode.h"
 
+int jc_errno;
+
 struct jc_error {
 	const char *name;
 	const char *desc;
 };
 
 
-#define JC_ERRCNT 10
+#define JC_ERRCNT 13
 static const int errcnt = JC_ERRCNT;
 static const struct jc_error jc_error_list[JC_ERRCNT + 1] = {
 	{ "no_error",    "success" },  // 0 - not a real error
-	{ "null_param",  "function got a bad NULL parameter" },  // 1
+	{ "null",        "function got a bad NULL parameter" },  // 1
 	{ "getcwd",      "couldn't get the current directory" },  // 2
 	{ "cdotdot",     "jc_collapse_dotdot() call failed" },  // 3
 	{ "grn_dir_end", "get_relative_name() result has directory at end" },  // 4
@@ -26,7 +28,10 @@ static const struct jc_error jc_error_list[JC_ERRCNT + 1] = {
 	{ "mb_wc_fail",  "a multibyte/wide char conversion failed" },  // 7
 	{ "alarm_fail",  "alarm call failed" },  // 8
 	{ "alloc_fail",  "memory allocation failed" },  // 9
-	{ NULL, NULL },  // 10
+	{ "numsort",     "jc_numeric_sort() was passed a NULL pointer" },  // 10
+	{ "datetime",    "date/time string is invalid" },  // 11
+	{ "win32api",    "a Win32 API call failed" },  // 12
+	{ NULL, NULL },  // 13
 };
 
 
@@ -48,7 +53,7 @@ extern const char *jc_get_errdesc(int errnum)
 
 extern int jc_print_error(int errnum)
 {
-	if (errnum > errcnt) return -5;
+	if (errnum > errcnt) return JC_EBADERR;
 	if (errnum < 0) errnum = -errnum;
 	fprintf(stderr, "error: %s (%s)\n", jc_error_list[errnum].desc, jc_error_list[errnum].name);
 	return 0;

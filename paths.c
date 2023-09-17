@@ -21,13 +21,13 @@ extern int jc_collapse_dotdot(char * const path)
   unsigned int i = 0;
 
   /* Fail if not passed an absolute path */
-  if (unlikely(*path != '/')) return -1;
+  if (unlikely(*path != '/')) return JC_ENULL;
 
   p = path; out = path;
 
   while (*p != '\0') {
     /* Abort if we're too close to the end of the buffer */
-    if (unlikely(i >= (PATHBUF_SIZE - 3))) return -2;
+    if (unlikely(i >= (PATHBUF_SIZE - 3))) return JC_ECDOTDOT;
 
     /* Skip repeated slashes */
     while (*p == '/' && *(p + 1) == '/') {
@@ -83,11 +83,11 @@ extern int jc_make_relative_link_name(const char * const src,
   static char p1[PATHBUF_SIZE * 2], p2[PATHBUF_SIZE * 2];
   static char *sp, *dp, *ss;
 
-  if (unlikely(!src || !dest)) return -1;
+  if (unlikely(!src || !dest)) return JC_ENULL;
 
   /* Get working directory path and prefix to pathnames if needed */
   if (*src != '/' || *dest != '/') {
-    if (!getcwd(p1, PATHBUF_SIZE * 2)) return -2;
+    if (!getcwd(p1, PATHBUF_SIZE * 2)) return JC_EGETCWD;
     *(p1 + (PATHBUF_SIZE * 2) - 1) = '\0';
     strncat(p1, "/", PATHBUF_SIZE * 2 - 1);
     strncpy(p2, p1, PATHBUF_SIZE * 2);
@@ -102,8 +102,8 @@ extern int jc_make_relative_link_name(const char * const src,
   strncat(p2, dest, PATHBUF_SIZE);
 
   /* Collapse . and .. path components */
-  if (unlikely(jc_collapse_dotdot(p1) != 0)) return -3;
-  if (unlikely(jc_collapse_dotdot(p2) != 0)) return -3;
+  if (unlikely(jc_collapse_dotdot(p1) != 0)) return JC_ECDOTDOT;
+  if (unlikely(jc_collapse_dotdot(p2) != 0)) return JC_ECDOTDOT;
 
   /* Find where paths differ, remembering each slash along the way */
   sp = p1; dp = p2; ss = p1;
@@ -130,8 +130,8 @@ extern int jc_make_relative_link_name(const char * const src,
   if (*(rel_path - 1) == '.')
     if (*(rel_path - 2) == '/' ||
         (*(rel_path - 2) == '.' && *(rel_path - 3) == '/'))
-      return -4;
-  if (unlikely(*(rel_path - 1) == '/')) return -4;
+      return JC_EGRNEND;
+  if (unlikely(*(rel_path - 1) == '/')) return JC_EGRNEND;
 
   *rel_path = '\0';
   return 0;

@@ -67,16 +67,16 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 	static char temp[PATHBUF_SIZE * 2];
 	int len;
 
-	if (unlikely(!argv)) return -6;
+	if (unlikely(!argv)) return JC_ENULL;
 	for (int counter = 0; counter < argc; counter++) {
 		len = W2M(wargv[counter], &temp);
 		if (unlikely(len < 1)) {
 			jc_errno = GetLastError();
-			return -7;
+			return JC_EBADARGV;
 		}
 
 		argv[counter] = (char *)malloc((size_t)len + 1);
-		if (unlikely(!argv[counter])) return -9;
+		if (unlikely(!argv[counter])) return JC_EALLOC;
 		strncpy(argv[counter], temp, (size_t)len + 1);
 	}
 	return 0;
@@ -97,7 +97,7 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 
 	if (stream_mode == _O_U16TEXT) {
 		/* Convert to wide string and send to wide console output */
-		if(jc_string_to_wstring(str, &wstr) != 0) return -7;
+		if(jc_string_to_wstring(str, &wstr) != 0) return JC_EALLOC;
 		fflush(stream);
 		_setmode(_fileno(stream), stream_mode);
 		if (cr == 2) retval = fwprintf(stream, L"%S%C", wstr, 0);
@@ -261,12 +261,12 @@ extern int jc_link(const char *path1, const char *path2)
 /* Copy a string to a wide string - wstring must be freed by the caller */
 extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
 {
-	if (unlikely(wstring == NULL)) return -1;
+	if (unlikely(wstring == NULL)) return JC_ENULL;
 	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
-	if (unlikely(*wstring == NULL)) return -9;
+	if (unlikely(*wstring == NULL)) return JC_EALLOC;
 	if (unlikely(!M2W(string, *wstring))) {
 		free(*wstring);
-		return -7;
+		return JC_EMBWC;
 	}
 	return 0;
 }

@@ -124,6 +124,21 @@ extern const char *jc_get_errname(int errnum);
 extern const char *jc_get_errdesc(int errnum);
 extern int jc_print_error(int errnum);
 
+#define JC_ENOERROR  0
+#define JC_ENULL     1
+#define JC_EGETCWD   2
+#define JC_ECDOTDOT  3
+#define JC_EGRNEND   4
+#define JC_EBADERR   5
+#define JC_EBADARGV  6
+#define JC_EMBWC     7
+#define JC_EALARM    8
+#define JC_EALLOC    9
+#define JC_ENUMSORT  10
+#define JC_EDATETIME 11
+#define JC_EWIN32API 12
+
+
 
 /*** jody_hash ***/
 
