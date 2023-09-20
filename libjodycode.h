@@ -305,7 +305,8 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
  #define JC_X_OK X_OK
 #endif /* Windows */
 
-/* Cross-platform help for strings in Unicode mode on Windows */
+/* Cross-platform help for strings in Unicode mode on Windows
+ * On non-Windows platforms a lot of these are just wrappers */
 extern int jc_errno;
 extern int jc_access(const char *pathname, int mode);
 extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
@@ -314,8 +315,13 @@ extern int jc_rename(const char * const restrict oldpath, const char * restrict 
 extern int jc_remove(const char *pathname);
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
 
-#ifdef UNICODE
+/* Slash conversion is needed on Windows regardless of Unicode support */
+#ifdef ON_WINDOWS
  extern void jc_slash_convert(char *path);
+#endif
+
+/* These are used for Unicode output and string work on Windows only */
+#ifdef UNICODE
  extern void jc_set_output_modes(unsigned int modes);
  extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring);
  extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv);

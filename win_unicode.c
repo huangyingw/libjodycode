@@ -18,7 +18,9 @@
 static int out_mode = _O_TEXT;
 static int err_mode = _O_TEXT;
 int jc_errno;
+#endif
 
+#ifdef ON_WINDOWS
 /* Convert slashes to backslashes in a file path */
 extern void jc_slash_convert(char *path)
 {
@@ -28,8 +30,10 @@ extern void jc_slash_convert(char *path)
 	}
 	return;
 }
+#endif
 
 
+#ifdef UNICODE
 /* Set output modes to TEXT, BINARY, or UTF-16 */
 extern void jc_set_output_modes(unsigned int modes)
 {
@@ -58,6 +62,20 @@ extern void jc_set_output_modes(unsigned int modes)
 		err_mode = (modes & 0x02U) ? _O_U16TEXT : _O_BINARY;
 	}
 	return;
+}
+
+
+/* Copy a string to a wide string - wstring must be freed by the caller */
+extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
+{
+	if (unlikely(wstring == NULL)) return JC_ENULL;
+	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
+	if (unlikely(*wstring == NULL)) return JC_EALLOC;
+	if (unlikely(!M2W(string, *wstring))) {
+		free(*wstring);
+		return JC_EMBWC;
+	}
+	return 0;
 }
 
 
@@ -255,19 +273,3 @@ extern int jc_link(const char *path1, const char *path2)
 	return link(path1, path2);
 #endif  /* ON_WINDOWS */
 }
-
-
-#ifdef UNICODE
-/* Copy a string to a wide string - wstring must be freed by the caller */
-extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
-{
-	if (unlikely(wstring == NULL)) return JC_ENULL;
-	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
-	if (unlikely(*wstring == NULL)) return JC_EALLOC;
-	if (unlikely(!M2W(string, *wstring))) {
-		free(*wstring);
-		return JC_EMBWC;
-	}
-	return 0;
-}
-#endif
