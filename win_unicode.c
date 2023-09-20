@@ -103,33 +103,29 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 #endif /* UNICODE */
 
 
-/* Print a string that is wide on Windows but normal on POSIX */
-extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr)
+/* Check file exist/read/write, converting for Windows if necessary */
+extern int jc_access(const char *pathname, int mode)
 {
 #ifdef UNICODE
 	int retval;
-	int stream_mode = out_mode;
-	JC_WCHAR_T *wstr;
-
-	if (stream == stderr) stream_mode = err_mode;
-
-	if (stream_mode == _O_U16TEXT) {
-		/* Convert to wide string and send to wide console output */
-		if(jc_string_to_wstring(str, &wstr) != 0) return JC_EALLOC;
-		fflush(stream);
-		_setmode(_fileno(stream), stream_mode);
-		if (cr == 2) retval = fwprintf(stream, L"%S%C", wstr, 0);
-		else retval = fwprintf(stream, L"%S%S", wstr, cr == 1 ? L"\n" : L"");
-		fflush(stream);
-		_setmode(_fileno(stream), _O_TEXT);
-		free(wstr);
-		return retval;
-	} else {
+	JC_WCHAR_T *widename;
 #endif
-		if (cr == 2) return fprintf(stream, "%s%c", str, 0);
-		else return fprintf(stream, "%s%s", str, cr == 1 ? "\n" : "");
-#ifdef UNICODE
+
+	if (unlikely(pathname == NULL)) {
+		jc_errno = EFAULT;
+		return -1;
 	}
+
+#ifdef UNICODE
+	if (jc_string_to_wstring(pathname, &widename) != 0) {
+		jc_errno = ENOMEM;
+		return -1;
+	}
+	retval = _waccess(widename, mode);
+	free(widename);
+	return retval;
+#else
+	return access(pathname, mode);
 #endif
 }
 
@@ -161,83 +157,33 @@ extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 }
 
 
-/* Check file exist/read/write, converting for Windows if necessary */
-extern int jc_access(const char *pathname, int mode)
+/* Print a string that is wide on Windows but normal on POSIX */
+extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr)
 {
 #ifdef UNICODE
 	int retval;
-	JC_WCHAR_T *widename;
+	int stream_mode = out_mode;
+	JC_WCHAR_T *wstr;
+
+	if (stream == stderr) stream_mode = err_mode;
+
+	if (stream_mode == _O_U16TEXT) {
+		/* Convert to wide string and send to wide console output */
+		if(jc_string_to_wstring(str, &wstr) != 0) return JC_EALLOC;
+		fflush(stream);
+		_setmode(_fileno(stream), stream_mode);
+		if (cr == 2) retval = fwprintf(stream, L"%S%C", wstr, 0);
+		else retval = fwprintf(stream, L"%S%S", wstr, cr == 1 ? L"\n" : L"");
+		fflush(stream);
+		_setmode(_fileno(stream), _O_TEXT);
+		free(wstr);
+		return retval;
+	} else {
 #endif
-
-	if (unlikely(pathname == NULL)) {
-		jc_errno = EFAULT;
-		return -1;
-	}
-
+		if (cr == 2) return fprintf(stream, "%s%c", str, 0);
+		else return fprintf(stream, "%s%s", str, cr == 1 ? "\n" : "");
 #ifdef UNICODE
-	if (jc_string_to_wstring(pathname, &widename) != 0) {
-		jc_errno = ENOMEM;
-		return -1;
 	}
-	retval = _waccess(widename, mode);
-	free(widename);
-	return retval;
-#else
-	return access(pathname, mode);
-#endif
-}
-
-
-/* Rename a file, converting for Windows if necessary */
-extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath)
-{
-#ifdef UNICODE
-	int retval;
-	JC_WCHAR_T *wideold, *widenew;
-#endif
-
-	if (unlikely(oldpath == NULL || newpath == NULL)) {
-		jc_errno = EFAULT;
-		return -1;
-	}
-
-#ifdef UNICODE
-	if (unlikely(jc_string_to_wstring(oldpath, &wideold) != 0 || jc_string_to_wstring(newpath, &widenew) != 0)) {
-		jc_errno = ENOMEM;
-		return -1;
-	}
-	retval = MoveFileW(wideold, widenew) ? 0 : -1;
-	free(wideold); free(widenew);
-	return retval;
-#else
-	return rename(oldpath, newpath);
-#endif
-}
-
-
-/* Delete a file, converting for Windows if necessary */
-extern int jc_remove(const char *pathname)
-{
-#ifdef UNICODE
-	int retval;
-	JC_WCHAR_T *widename;
-#endif
-
-	if (unlikely(pathname == NULL)) {
-		jc_errno = EFAULT;
-		return -1;
-	}
-
-#ifdef UNICODE
-	if (jc_string_to_wstring(pathname, &widename) != 0) {
-		jc_errno = ENOMEM;
-		return -1;
-	}
-	retval = DeleteFileW(widename) ? 0 : 1;
-	free(widename);
-	return retval;
-#else
-	return remove(pathname);
 #endif
 }
 
@@ -272,4 +218,58 @@ extern int jc_link(const char *path1, const char *path2)
 #else
 	return link(path1, path2);
 #endif  /* ON_WINDOWS */
+}
+
+
+/* Delete a file, converting for Windows if necessary */
+extern int jc_remove(const char *pathname)
+{
+#ifdef UNICODE
+	int retval;
+	JC_WCHAR_T *widename;
+#endif
+
+	if (unlikely(pathname == NULL)) {
+		jc_errno = EFAULT;
+		return -1;
+	}
+
+#ifdef UNICODE
+	if (jc_string_to_wstring(pathname, &widename) != 0) {
+		jc_errno = ENOMEM;
+		return -1;
+	}
+	retval = DeleteFileW(widename) ? 0 : 1;
+	free(widename);
+	return retval;
+#else
+	return remove(pathname);
+#endif
+}
+
+
+/* Rename a file, converting for Windows if necessary */
+extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath)
+{
+#ifdef UNICODE
+	int retval;
+	JC_WCHAR_T *wideold, *widenew;
+#endif
+
+	if (unlikely(oldpath == NULL || newpath == NULL)) {
+		jc_errno = EFAULT;
+		return -1;
+	}
+
+#ifdef UNICODE
+	if (unlikely(jc_string_to_wstring(oldpath, &wideold) != 0 || jc_string_to_wstring(newpath, &widenew) != 0)) {
+		jc_errno = ENOMEM;
+		return -1;
+	}
+	retval = MoveFileW(wideold, widenew) ? 0 : -1;
+	free(wideold); free(widenew);
+	return retval;
+#else
+	return rename(oldpath, newpath);
+#endif
 }
