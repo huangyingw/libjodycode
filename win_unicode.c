@@ -273,3 +273,39 @@ extern int jc_rename(const char * const restrict oldpath, const char * restrict 
 	return rename(oldpath, newpath);
 #endif
 }
+
+
+/*** XXX: EXPERIMENTAL UNICODE DIRECTORY ROUTINES ***/
+
+
+/* Rename a file, converting for Windows if necessary */
+extern JC_DIR *jc_opendir(const char * restrict path)
+{
+#ifdef ON_WINDOWS
+	int retval;
+	JC_DIR *dirp;
+ #ifdef UNICODE
+	JC_WCHAR_T *widename;
+ #endif
+
+	if (unlikely(path == NULL)) {
+		jc_errno = EFAULT;
+		return NULL;
+	}
+
+ #ifdef UNICODE
+	if (unlikely(jc_string_to_wstring(path, &widename) != 0) != 0) goto error_nomem;
+	free(widename);
+ #endif  /* UNICODE */
+	dirp = (JC_DIR *)malloc(sizeof JC_DIR);
+	if (unlikely(dirp == NULL)) goto error_nomem;
+
+	return retval;
+
+error_nomem:
+	jc_errno = ENOMEM;
+	return NULL;
+#else
+	return opendir(path);
+#endif /* ON_WINDOWS */
+}

@@ -68,6 +68,7 @@ extern "C" {
   #define W2M(a,b) WideCharToMultiByte(CP_UTF8, 0, a, -1, (LPSTR)b, WPATH_MAX, NULL, NULL)
  #endif
 #else
+ #include <dirent.h>
  #include <sys/stat.h>
 #endif /* ON_WINDOWS */
 
@@ -305,6 +306,17 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
  #define JC_X_OK X_OK
 #endif /* Windows */
 
+/* Directory stream type
+ * Must be hijacked because FindFirstFileW() does one readdir() equivalent too */
+#ifdef ON_WINDOWS
+typedef struct _JC_DIR_T {
+	WIN32_FIND_DATA findfiledata;
+	HANDLE handle;
+} JC_DIR;
+#else
+ #define JC_DIR DIR
+#endif /* ON_WINDOWS */
+
 /* Cross-platform help for strings in Unicode mode on Windows
  * On non-Windows platforms a lot of these are just wrappers */
 extern int jc_errno;
@@ -314,6 +326,8 @@ extern int jc_link(const char *path1, const char *path2);
 extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath);
 extern int jc_remove(const char *pathname);
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
+
+extern JC_DIR *jc_opendir(const char * restrict path);
 
 /* Slash conversion is needed on Windows regardless of Unicode support */
 #ifdef ON_WINDOWS
