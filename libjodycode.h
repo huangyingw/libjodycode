@@ -73,16 +73,16 @@ extern "C" {
 #endif /* ON_WINDOWS */
 
 #ifdef UNICODE
- #ifndef PATHBUF_SIZE
-  #define PATHBUF_SIZE 8192
+ #ifndef JC_PATHBUF_SIZE
+  #define JC_PATHBUF_SIZE 8192
  #endif
 #else
- #ifndef PATHBUF_SIZE
-  #define PATHBUF_SIZE 4096
+ #ifndef JC_PATHBUF_SIZE
+  #define JC_PATHBUF_SIZE 4096
  #endif
 #endif
 #ifndef WPATH_MAX
- #define WPATH_MAX PATHBUF_SIZE
+ #define WPATH_MAX JC_PATHBUF_SIZE
 #endif
 
 
@@ -307,9 +307,12 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 #endif /* Windows */
 
 /* Directory stream type
- * Must be hijacked because FindFirstFileW() does one readdir() equivalent too */
+ * Must be hijacked because FindFirstFileW() does one readdir() equivalent too
+ * When the first file is returned, this entry is removed from the linked list */
 #ifdef ON_WINDOWS
 typedef struct _JC_DIR_T {
+	struct _JC_DIR_T *next;
+	DIR dirent;
 	WIN32_FIND_DATA findfiledata;
 	HANDLE handle;
 } JC_DIR;

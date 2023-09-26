@@ -21,6 +21,9 @@ int jc_errno;
 #endif
 
 #ifdef ON_WINDOWS
+static int jc_ffd_to_dirent(JC_DIR *dirp);
+
+
 /* Convert slashes to backslashes in a file path */
 extern void jc_slash_convert(char *path)
 {
@@ -82,7 +85,7 @@ extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T *
 /* Copy Windows wide character arguments to UTF-8 */
 extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 {
-	static char temp[PATHBUF_SIZE * 2];
+	static char temp[JC_PATHBUF_SIZE * 2];
 	int len;
 
 	if (unlikely(!argv)) return JC_ENULL;
@@ -278,12 +281,51 @@ extern int jc_rename(const char * const restrict oldpath, const char * restrict 
 /*** XXX: EXPERIMENTAL UNICODE DIRECTORY ROUTINES ***/
 
 
-/* Rename a file, converting for Windows if necessary */
+#ifdef ON_WINDOWS
+/* Copy WIN32_FIND_FILE data to DIR data for a JC_DIR */
+static int jc_ffd_to_dirent(JC_DIR *dirp)
+{
+	char *tempname;
+
+	if (dirp == NULL) {
+		errno = JC_EFAULT;
+		return -1;
+	}
+
+ #ifdef UNICODE
+	/* Must count bytes after conversion to allocate correct size */
+	tempname = (char *)malloc(JC_PATHBUF_MAX + 4);
+	if (unlikely(tempname == NULL)) goto error_nomem;
+	if (unlikely(!W2M(dirp->ffd.cFileName, tempname))) goto error_name;
+	dirp->dirent.d_name = (char *)malloc(strlen(tempname) + 1);
+	if (unlikely(dirp->dirent.d_name == NULL)) goto error_nomem;
+	strcpy(dirp->dirent.d_name, tempname);
+	free(tempname);
+ #else
+	strcpy(dirp->dirent.d_name, dirp->ffd.cFileName);
+ #endif
+	return 0;
+
+error_name:
+	jc_errno = GetLastError();
+	if (tempname != NULL) free(tempname);
+	if (dirp->dirent.d_name != NULL) free(dirp->dirent.d_name);
+	return -1;
+error_nomem:
+	if (tempname != NULL) free(tempname);
+	jc_errno = ENOMEM;
+	return -1;
+}
+#endif  /* ON_WINDOWS */
+
+
+/* Open a directory; handle Windows doing readdir() equivalent too */
 extern JC_DIR *jc_opendir(const char * restrict path)
 {
 #ifdef ON_WINDOWS
 	int retval;
 	JC_DIR *dirp;
+	char *tempname, *p;
  #ifdef UNICODE
 	JC_WCHAR_T *widename;
  #endif
@@ -293,16 +335,44 @@ extern JC_DIR *jc_opendir(const char * restrict path)
 		return NULL;
 	}
 
+	tempname = (char *)malloc(JC_PATHBUF_SIZE + 4);
+	if (unlikely(tempname == NULL)) goto error_nomem;
+
+	/* Windows requires \* at the end of directory names */
+	strncpy(tempname, path, JC_PATHBUF_SIZE - 1);
+	p = tempname + strlen(tempname) - 1;
+	if (*p == '/' || *p == '\\') *p = '\0';
+	strncat(tempname, "\\*", JC_PATHBUF_SIZE - 1);
+
  #ifdef UNICODE
-	if (unlikely(jc_string_to_wstring(path, &widename) != 0) != 0) goto error_nomem;
-	free(widename);
+	widename = (char *)malloc(JC_PATHBUF_SIZE + 4);
+	if (unlikely(widename == NULL)) goto error_nomem;
+	if (unlikely(jc_string_to_wstring(tempname, &widename) != 0)) goto error_nomem;
  #endif  /* UNICODE */
-	dirp = (JC_DIR *)malloc(sizeof JC_DIR);
+
+	dirp = (JC_DIR *)calloc(1, sizeof JC_DIR);
 	if (unlikely(dirp == NULL)) goto error_nomem;
+
+ #ifdef UNICODE
+	dirp->hFind = FindFirstFileW(widename, &(dirp->ffd));
+	free(widename);
+ #else
+	dirp->hFind = FindFirstFileA(tempname, &(dirp->ffd));
+ #endif
+	free(tempname);
+	if (unlikely(dirp->hFind == INVALID_HANDLE_VALUE)) goto error_fff;
+	if (jc_ffd_to_dirent(dirp) != 0) goto error_fff_after;
 
 	return retval;
 
+error_fff:
+	jc_errno = GetLastError();
+error_fff_after:
+	if (dirp != NULL) free(dirp);
+	return NULL;
 error_nomem:
+	if (tempname != NULL) free(tempname);
+	if (widename != NULL) free(widename);
 	jc_errno = ENOMEM;
 	return NULL;
 #else
