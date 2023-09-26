@@ -15,18 +15,6 @@ https://www.jodybruchon.com/
 
 Version compatibility
 -------------------------------------------------------------------------------
-In libjodycode 2.0 a new version table was introduced that maintains a separate
-version number for each logical section of the library. If something in the
-library changes in a way that's no longer compatible with previous versions,
-this version table paired with the provided "libjodycode_check.c/.h" files will
-allow the linked program to verify that the sections of the library it actually
-uses have not changed, ignoring the rest. This has a significant advantage over
-the simpler whole-API version system because the program itself can detect if
-the library it's linked to is still compatible enough to safely continue.
-
-The provided version check code reports detailed information about the problem
-in a way that is both understandable by users and informative to maintainers.
-
 libjodycode 3.0 introduced a new "feature level" number which changes on every
 revision to the public API. Programs can check this number against the number
 that corresponds to the newest library interface that they use. Whenever any
@@ -34,6 +22,23 @@ function or variable is added to the public API this number will increase.
 To find the number your program should store and check against this number,
 find every interface you use documented in FEATURELEVELS.txt and choose the
 highest feature level number out of those.
+
+In libjodycode 2.0 a new version table was introduced that maintains a separate
+version number for each logical section of the library; this table was removed
+in libjodycode 4.0 in favor of the feature level number.
+
+Programs can use the `libjodycode_check.c/.h` helper code provided to check
+for linking against an incompatible version of libjodycode. Copy the files to
+the program's code base, add `#include "libjodycode_check.h"` to the main C
+file, and add
+
+`if (libjodycode_version_check(verbose, bail) != 0) failure_action();`
+
+
+somewhere early in `main()`. Set verbose to 1 to output detailed error info
+via `fprintf(stderr, ...)` if a bad version is found. Set bail to 1 to have
+the check code immediately exit if a bad version is found instead of returning
+to the caller with a non-zero return value.
 
 
 
