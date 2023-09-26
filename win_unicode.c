@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "likely_unlikely.h"
@@ -17,13 +18,9 @@
 #include <io.h>
 static int out_mode = _O_TEXT;
 static int err_mode = _O_TEXT;
-int jc_errno;
 #endif
 
 #ifdef ON_WINDOWS
-static int jc_ffd_to_dirent(JC_DIR *dirp);
-
-
 /* Convert slashes to backslashes in a file path */
 extern void jc_slash_convert(char *path)
 {
@@ -283,36 +280,40 @@ extern int jc_rename(const char * const restrict oldpath, const char * restrict 
 
 #ifdef ON_WINDOWS
 /* Copy WIN32_FIND_FILE data to DIR data for a JC_DIR */
-static int jc_ffd_to_dirent(JC_DIR *dirp)
+static int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 {
+#ifdef UNICODE
 	char *tempname;
+#endif
 
 	if (dirp == NULL) {
-		errno = JC_EFAULT;
+		jc_errno = EFAULT;
 		return -1;
 	}
 
  #ifdef UNICODE
 	/* Must count bytes after conversion to allocate correct size */
-	tempname = (char *)malloc(JC_PATHBUF_MAX + 4);
+	tempname = (char *)malloc(JC_PATHBUF_SIZE + 4);
 	if (unlikely(tempname == NULL)) goto error_nomem;
-	if (unlikely(!W2M(dirp->ffd.cFileName, tempname))) goto error_name;
-	dirp->dirent.d_name = (char *)malloc(strlen(tempname) + 1);
-	if (unlikely(dirp->dirent.d_name == NULL)) goto error_nomem;
-	strcpy(dirp->dirent.d_name, tempname);
+	if (unlikely(!W2M(ffd.cFileName, tempname))) goto error_name;
+	*dirp = (JC_DIR *)calloc(1, sizeof(JC_DIR) + strlen(tempname) + 1);
+	if (unlikely(*dirp == NULL)) goto error_nomem;
+	strcpy((*dirp)->dirent.d_name, tempname);
 	free(tempname);
  #else
-	strcpy(dirp->dirent.d_name, dirp->ffd.cFileName);
+	*dirp = (JC_DIR *)calloc(1, sizeof(JC_DIR) + strlen(ffd.cFileName) + 1);
+	if (unlikely(*dirp == NULL)) goto error_nomem;
+	strcpy((*dirp)->dirent.d_name, ffd.cFileName);
  #endif
+	// TODO: populate JC_DIR stuff
 	return 0;
 
 error_name:
 	jc_errno = GetLastError();
-	if (tempname != NULL) free(tempname);
-	if (dirp->dirent.d_name != NULL) free(dirp->dirent.d_name);
-	return -1;
 error_nomem:
+#ifdef UNICODE
 	if (tempname != NULL) free(tempname);
+#endif
 	jc_errno = ENOMEM;
 	return -1;
 }
@@ -323,11 +324,12 @@ error_nomem:
 extern JC_DIR *jc_opendir(const char * restrict path)
 {
 #ifdef ON_WINDOWS
-	int retval;
 	JC_DIR *dirp;
 	char *tempname, *p;
+	WIN32_FIND_DATA ffd;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
  #ifdef UNICODE
-	JC_WCHAR_T *widename;
+	JC_WCHAR_T *widename = NULL;
  #endif
 
 	if (unlikely(path == NULL)) {
@@ -345,30 +347,26 @@ extern JC_DIR *jc_opendir(const char * restrict path)
 	strncat(tempname, "\\*", JC_PATHBUF_SIZE - 1);
 
  #ifdef UNICODE
-	widename = (char *)malloc(JC_PATHBUF_SIZE + 4);
+	widename = (wchar_t *)malloc(JC_PATHBUF_SIZE + 4);
 	if (unlikely(widename == NULL)) goto error_nomem;
 	if (unlikely(jc_string_to_wstring(tempname, &widename) != 0)) goto error_nomem;
  #endif  /* UNICODE */
 
-	dirp = (JC_DIR *)calloc(1, sizeof JC_DIR);
-	if (unlikely(dirp == NULL)) goto error_nomem;
-
  #ifdef UNICODE
-	dirp->hFind = FindFirstFileW(widename, &(dirp->ffd));
+	hFind = FindFirstFileW(widename, &ffd);
 	free(widename);
  #else
-	dirp->hFind = FindFirstFileA(tempname, &(dirp->ffd));
+	hFind = FindFirstFileA(tempname, &ffd);
  #endif
 	free(tempname);
-	if (unlikely(dirp->hFind == INVALID_HANDLE_VALUE)) goto error_fff;
-	if (jc_ffd_to_dirent(dirp) != 0) goto error_fff_after;
+	if (unlikely(hFind == INVALID_HANDLE_VALUE)) goto error_fff;
+	if (jc_ffd_to_dirent(&dirp, hFind, ffd) != 0) goto error_fff_after;
 
-	return retval;
+	return dirp;
 
 error_fff:
 	jc_errno = GetLastError();
 error_fff_after:
-	if (dirp != NULL) free(dirp);
 	return NULL;
 error_nomem:
 	if (tempname != NULL) free(tempname);

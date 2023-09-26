@@ -51,6 +51,7 @@ extern "C" {
 #define LIBJODYCODE_ALARM_VER       1
 
 
+#include <dirent.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -310,11 +311,15 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
  * Must be hijacked because FindFirstFileW() does one readdir() equivalent too
  * When the first file is returned, this entry is removed from the linked list */
 #ifdef ON_WINDOWS
+typedef struct _JC_DIRENT_T {
+	uint64_t d_ino;
+	char d_name[];
+} JC_DIRENT;
 typedef struct _JC_DIR_T {
 	struct _JC_DIR_T *next;
-	DIR dirent;
-	WIN32_FIND_DATA findfiledata;
-	HANDLE handle;
+	WIN32_FIND_DATA ffd;
+	HANDLE hFind;
+	JC_DIRENT dirent;
 } JC_DIR;
 #else
  #define JC_DIR DIR
@@ -322,7 +327,7 @@ typedef struct _JC_DIR_T {
 
 /* Cross-platform help for strings in Unicode mode on Windows
  * On non-Windows platforms a lot of these are just wrappers */
-extern int jc_errno;
+extern uint32_t jc_errno;
 extern int jc_access(const char *pathname, int mode);
 extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int jc_link(const char *path1, const char *path2);

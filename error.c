@@ -4,10 +4,11 @@
  * Released under The MIT License
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include "libjodycode.h"
 
-int jc_errno;
+uint32_t jc_errno;
 
 struct jc_error {
 	const char *name;
