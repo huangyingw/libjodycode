@@ -21,34 +21,15 @@ extern "C" {
  * regardless of compatibility; the lowest feature level possible that
  * supports the used interfaces should be chosen by programs that check
  * version information for compatibility. See README for more information. */
-#define LIBJODYCODE_API_VERSION       3
-#define LIBJODYCODE_API_FEATURE_LEVEL 4
-#define LIBJODYCODE_VER               "3.2"
-#define LIBJODYCODE_VERDATE           "2023-09-13"
+#define LIBJODYCODE_API_VERSION       4
+#define LIBJODYCODE_API_FEATURE_LEVEL 3
+#define LIBJODYCODE_VER               "4.0"
+#define LIBJODYCODE_VERDATE           "2023-09-26"
 #ifdef UNICODE
  #define LIBJODYCODE_WINDOWS_UNICODE  1
 #else
  #define LIBJODYCODE_WINDOWS_UNICODE  0
 #endif
-
-/* API sub-version table
- * This table tells programs about API changes so that programs can detect
- * an incompatible change and warn gracefully instead of crashing or risking
- * damage to user data.
- *
- * REMINDER: additions must be added to version.c and libjodycode_check.c */
-#define LIBJODYCODE_CACHEINFO_VER   1
-#define LIBJODYCODE_JODY_HASH_VER   2
-#define LIBJODYCODE_OOM_VER         1
-#define LIBJODYCODE_PATHS_VER       1
-#define LIBJODYCODE_SIZE_SUFFIX_VER 1
-#define LIBJODYCODE_SORT_VER        1
-#define LIBJODYCODE_STRING_VER      1
-#define LIBJODYCODE_STRTOEPOCH_VER  1
-#define LIBJODYCODE_WIN_STAT_VER    1
-#define LIBJODYCODE_WIN_UNICODE_VER 2
-#define LIBJODYCODE_ERROR_VER       1
-#define LIBJODYCODE_ALARM_VER       1
 
 
 #include <dirent.h>
@@ -327,7 +308,7 @@ typedef struct _JC_DIR_T {
 
 /* Cross-platform help for strings in Unicode mode on Windows
  * On non-Windows platforms a lot of these are just wrappers */
-extern uint32_t jc_errno;
+extern int32_t jc_errno;
 extern int jc_access(const char *pathname, int mode);
 extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int jc_link(const char *path1, const char *path2);

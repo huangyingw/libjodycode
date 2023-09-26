@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "libjodycode.h"
 
-uint32_t jc_errno;
+int32_t jc_errno;
 
 struct jc_error {
 	const char *name;
