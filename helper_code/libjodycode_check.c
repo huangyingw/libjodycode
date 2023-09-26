@@ -26,10 +26,13 @@ const int jc_build_min_featurelevel = MY_FEATURELEVEL_REQ;
 int libjodycode_version_check(int verbose, int bail)
 {
 	JC_TEST_ONLY(if (verbose > 1) fprintf(stderr, "libjodycode version check test code\n\n");)
-	JC_TEST_ONLY(if (verbose > 1) goto incompatible_versiontable;)
+	JC_TEST_ONLY(if (verbose > 1) goto incompatible_version;)
+	if (jc_build_api_version != jc_api_version) goto incompatible_version;
+	if (jc_build_min_featurelevel > jc_api_featurelevel) goto incompatible_version;
+	if (jc_build_windows_unicode != jc_windows_unicode) goto incompatible_version;
 	return 0;
 
-incompatible_versiontable:
+incompatible_version:
 	if (verbose) {
 		fprintf(stderr, "\n==============================================================================\n");
 		fprintf(stderr,   "internal error: libjodycode on this system is an incompatible version\n\n");
@@ -42,7 +45,7 @@ incompatible_versiontable:
 					jc_windows_unicode == 1 ? "" : "out",
 					jc_build_windows_unicode == 1 ? "" : "non-");
 		if (jc_build_min_featurelevel > jc_build_api_featurelevel)
-			fprintf(stderr, "libjodycode feature level %d is required but linked library is level %d\n\n",
+			fprintf(stderr, "libjodycode feature level >= %d is required but linked library is level %d\n\n",
 				jc_build_min_featurelevel, jc_build_api_featurelevel);
 		fprintf(stderr, "==============================================================================\n\n");
 		fprintf(stderr, "\nUpdate libjodycode on your system and try again. If you continue to get this\n");
