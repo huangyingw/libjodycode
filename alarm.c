@@ -46,7 +46,7 @@ extern int jc_start_alarm(const unsigned int seconds, const int repeat)
 
 	if (repeat != 0) period = secs;
 	if (!CreateTimerQueueTimer(&hTimer, NULL, (WAITORTIMERCALLBACK)jc_catch_alarm, 0, secs, period, 0)) {
-		jc_errno = GetLastError();
+		jc_errno = (int32_t)GetLastError();
 		return JC_EALARM;
 	}
 	jc_alarm_ring++;
@@ -57,7 +57,7 @@ extern int jc_start_alarm(const unsigned int seconds, const int repeat)
 extern int jc_stop_alarm(void)
 {
 	if (CloseHandle(hTimer) == 0) {
-		jc_errno = GetLastError();
+		jc_errno = (int32_t)GetLastError();
 		return JC_EALARM;
 	}
 	return 0;
