@@ -1,4 +1,4 @@
-/* Jody Bruchon's Windows Unicode helper routines
+/* libjodycode: stdio calls
  *
  * Copyright (C) 2014-2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License
@@ -103,60 +103,6 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 #endif /* UNICODE */
 
 
-/* Check file exist/read/write, converting for Windows if necessary */
-extern int jc_access(const char *pathname, int mode)
-{
-#ifdef UNICODE
-	int retval;
-	JC_WCHAR_T *widename;
-#endif
-
-	if (unlikely(pathname == NULL)) {
-		jc_errno = EFAULT;
-		return -1;
-	}
-
-#ifdef UNICODE
-	if (jc_string_to_wstring(pathname, &widename) != 0) {
-		jc_errno = ENOMEM;
-		return -1;
-	}
-	retval = _waccess(widename, mode);
-	free(widename);
-	return retval;
-#else
-	return access(pathname, mode);
-#endif
-}
-
-
-/* Open a file, converting the name for Unicode on Windows if necessary */
-extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
-{
-#ifdef UNICODE
-	FILE *fp;
-	JC_WCHAR_T *widename;
-#endif
-
-	if (unlikely(pathname == NULL || mode == NULL)) {
-		jc_errno = EFAULT;
-		return NULL;
-	}
-
-#ifdef UNICODE
-	if (jc_string_to_wstring(pathname, &widename) != 0) {
-		jc_errno = ENOMEM;
-		return NULL;
-	}
-	fp = _wfopen(widename, mode);
-	free(widename);
-	return fp;
-#else
-	return fopen(pathname, mode);
-#endif
-}
-
-
 /* Print a string that is wide on Windows but normal on POSIX */
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr)
 {
@@ -188,99 +134,9 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 }
 
 
-/* Hard link a file, converting for Windows if necessary */
-extern int jc_link(const char *path1, const char *path2)
-{
-#ifdef ON_WINDOWS
-	int retval = 0;
-#ifdef UNICODE
-	JC_WCHAR_T *widename1, *widename2;
-#endif
-#endif
-
-	if (unlikely(path1 == NULL || path2 == NULL)) {
-		jc_errno = EFAULT;
-		return -1;
-	}
-
-#ifdef ON_WINDOWS
- #ifdef UNICODE
-	if (jc_string_to_wstring(path1, &widename1) != 0 || jc_string_to_wstring(path2, &widename2) != 0) {
-		jc_errno = ENOMEM;
-		return -1;
-	}
-	if (CreateHardLinkW((LPCWSTR)widename2, (LPCWSTR)widename1, NULL) != TRUE) retval = -1;
-	free(widename1); free(widename2);
- #else
-	if (CreateHardLink(path2, path1, NULL) != TRUE) retval = -1;
- #endif  /* UNICODE */
-	return retval;
-#else
-	return link(path1, path2);
-#endif  /* ON_WINDOWS */
-}
-
-
-/* Delete a file, converting for Windows if necessary */
-extern int jc_remove(const char *pathname)
-{
-#ifdef UNICODE
-	int retval;
-	JC_WCHAR_T *widename;
-#endif
-
-	if (unlikely(pathname == NULL)) {
-		jc_errno = EFAULT;
-		return -1;
-	}
-
-#ifdef UNICODE
-	if (jc_string_to_wstring(pathname, &widename) != 0) {
-		jc_errno = ENOMEM;
-		return -1;
-	}
-	retval = DeleteFileW(widename) ? 0 : 1;
-	free(widename);
-	return retval;
-#else
-	return remove(pathname);
-#endif
-}
-
-
-/* Rename a file, converting for Windows if necessary */
-extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath)
-{
-#ifdef UNICODE
-	int retval;
-	JC_WCHAR_T *wideold, *widenew;
-#endif
-
-	if (unlikely(oldpath == NULL || newpath == NULL)) {
-		jc_errno = EFAULT;
-		return -1;
-	}
-
-#ifdef UNICODE
-	if (unlikely(jc_string_to_wstring(oldpath, &wideold) != 0 || jc_string_to_wstring(newpath, &widenew) != 0)) {
-		jc_errno = ENOMEM;
-		return -1;
-	}
-	retval = MoveFileW(wideold, widenew) ? 0 : -1;
-	free(wideold); free(widenew);
-	return retval;
-#else
-	return rename(oldpath, newpath);
-#endif
-}
-
-
-/*** XXX: EXPERIMENTAL UNICODE DIRECTORY ROUTINES ***/
-
-
 #ifdef ON_WINDOWS
 /* Copy WIN32_FIND_FILE data to DIR data for a JC_DIR */
-static int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
+extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 {
 #ifdef UNICODE
 	char *tempname;
@@ -318,62 +174,3 @@ error_nomem:
 	return -1;
 }
 #endif  /* ON_WINDOWS */
-
-
-/* Open a directory; handle Windows doing readdir() equivalent too */
-extern JC_DIR *jc_opendir(const char * restrict path)
-{
-#ifdef ON_WINDOWS
-	JC_DIR *dirp;
-	char *tempname, *p;
-	WIN32_FIND_DATA ffd;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
- #ifdef UNICODE
-	JC_WCHAR_T *widename = NULL;
- #endif
-
-	if (unlikely(path == NULL)) {
-		jc_errno = EFAULT;
-		return NULL;
-	}
-
-	tempname = (char *)malloc(JC_PATHBUF_SIZE + 4);
-	if (unlikely(tempname == NULL)) goto error_nomem;
-
-	/* Windows requires \* at the end of directory names */
-	strncpy(tempname, path, JC_PATHBUF_SIZE - 1);
-	p = tempname + strlen(tempname) - 1;
-	if (*p == '/' || *p == '\\') *p = '\0';
-	strncat(tempname, "\\*", JC_PATHBUF_SIZE - 1);
-
- #ifdef UNICODE
-	widename = (wchar_t *)malloc(JC_PATHBUF_SIZE + 4);
-	if (unlikely(widename == NULL)) goto error_nomem;
-	if (unlikely(jc_string_to_wstring(tempname, &widename) != 0)) goto error_nomem;
- #endif  /* UNICODE */
-
- #ifdef UNICODE
-	hFind = FindFirstFileW(widename, &ffd);
-	free(widename);
- #else
-	hFind = FindFirstFileA(tempname, &ffd);
- #endif
-	free(tempname);
-	if (unlikely(hFind == INVALID_HANDLE_VALUE)) goto error_fff;
-	if (jc_ffd_to_dirent(&dirp, hFind, ffd) != 0) goto error_fff_after;
-
-	return dirp;
-
-error_fff:
-	jc_errno = (int32_t)GetLastError();
-error_fff_after:
-	return NULL;
-error_nomem:
-	if (tempname != NULL) free(tempname);
-	if (widename != NULL) free(widename);
-	jc_errno = ENOMEM;
-	return NULL;
-#else
-	return opendir(path);
-#endif /* ON_WINDOWS */
-}

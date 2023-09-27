@@ -32,26 +32,32 @@ extern "C" {
 #endif
 
 
+/* Define ON_WINDOWS if not otherwise defined and building on Windows */
+#if defined _WIN32 || defined __WIN32 || defined WIN64 || defined __WIN64
+ #ifndef ON_WINDOWS
+  #define ON_WINDOWS
+ #endif
+#endif
+
 #include <dirent.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 #ifdef ON_WINDOWS
-#ifndef WIN32_LEAN_AND_MEAN
- #define WIN32_LEAN_AND_MAN
-#endif
-#include <windows.h>
- /* Unicode conversion on Windows */
- #ifndef M2W
-  #define M2W(a,b) MultiByteToWideChar(CP_UTF8, 0, a, -1, (LPWSTR)b, WPATH_MAX)
+ #ifndef WIN32_LEAN_AND_MEAN
+  #define WIN32_LEAN_AND_MAN
  #endif
- #ifndef W2M
-  #define W2M(a,b) WideCharToMultiByte(CP_UTF8, 0, a, -1, (LPSTR)b, WPATH_MAX, NULL, NULL)
- #endif
-#else
- #include <dirent.h>
- #include <sys/stat.h>
+ #include <windows.h>
+  /* Unicode conversion on Windows */
+  #ifndef M2W
+   #define M2W(a,b) MultiByteToWideChar(CP_UTF8, 0, a, -1, (LPWSTR)b, WPATH_MAX)
+  #endif
+  #ifndef W2M
+   #define W2M(a,b) WideCharToMultiByte(CP_UTF8, 0, a, -1, (LPSTR)b, WPATH_MAX, NULL, NULL)
+  #endif
 #endif /* ON_WINDOWS */
 
 #ifdef UNICODE
@@ -66,6 +72,88 @@ extern "C" {
 #ifndef WPATH_MAX
  #define WPATH_MAX JC_PATHBUF_SIZE
 #endif
+
+
+/*** C standard library functions ***/
+#if defined _WIN32 || defined __WIN32 || defined ON_WINDOWS
+ #ifdef UNICODE
+  #define JC_WCHAR_T wchar_t
+  #define JC_FILE_MODE_RDONLY L"rb"
+  #define JC_FILE_MODE_WRONLY L"wb"
+  #define JC_FILE_MODE_RW L"w+b"
+  #define JC_FILE_MODE_RW_EXISTING L"r+b"
+  #define JC_FILE_MODE_WRONLY_APPEND L"ab"
+  #define JC_FILE_MODE_RW_APPEND L"a+b"
+  #define JC_FILE_MODE_RDONLY_SEQ L"rbS"
+  #define JC_FILE_MODE_WRONLY_SEQ L"wbS"
+  #define JC_FILE_MODE_RW_SEQ L"w+bS"
+  #define JC_FILE_MODE_RW_EXISTING_SEQ L"r+bS"
+  #define JC_FILE_MODE_WRONLY_APPEND_SEQ L"abS"
+  #define JC_FILE_MODE_RW_APPEND_SEQ L"a+bS"
+ #else /* Windows, not UNICODE */
+  #define JC_WCHAR_T char
+  #define JC_FILE_MODE_RDONLY "rb"
+  #define JC_FILE_MODE_WRONLY "wb"
+  #define JC_FILE_MODE_RW "w+b"
+  #define JC_FILE_MODE_RW_EXISTING "r+b"
+  #define JC_FILE_MODE_WRONLY_APPEND "ab"
+  #define JC_FILE_MODE_RW_APPEND "a+b"
+  #define JC_FILE_MODE_RDONLY_SEQ "rbS"
+  #define JC_FILE_MODE_WRONLY_SEQ "wbS"
+  #define JC_FILE_MODE_RW_SEQ "w+bS"
+  #define JC_FILE_MODE_RW_EXISTING_SEQ "r+bS"
+  #define JC_FILE_MODE_WRONLY_APPEND_SEQ "abS"
+  #define JC_FILE_MODE_RW_APPEND_SEQ "a+bS"
+ #endif
+ #define JC_F_OK 0
+ #define JC_R_OK 4
+ #define JC_W_OK 2
+ #define JC_X_OK 6
+#else /* Not Windows */
+ #define JC_WCHAR_T char
+ #define JC_FILE_MODE_RDONLY "rb"
+ #define JC_FILE_MODE_WRONLY "wb"
+ #define JC_FILE_MODE_RW "w+b"
+ #define JC_FILE_MODE_RW_EXISTING "r+b"
+ #define JC_FILE_MODE_WRONLY_APPEND "ab"
+ #define JC_FILE_MODE_RW_APPEND "a+b"
+ #define JC_FILE_MODE_RDONLY_SEQ "rb"
+ #define JC_FILE_MODE_WRONLY_SEQ "wb"
+ #define JC_FILE_MODE_RW_SEQ "w+b"
+ #define JC_FILE_MODE_RW_EXISTING_SEQ "r+b"
+ #define JC_FILE_MODE_WRONLY_APPEND_SEQ "ab"
+ #define JC_FILE_MODE_RW_APPEND_SEQ "a+b"
+ #define JC_F_OK F_OK
+ #define JC_R_OK R_OK
+ #define JC_W_OK W_OK
+ #define JC_X_OK X_OK
+#endif /* Windows */
+
+/* Directory stream type
+ * Must be hijacked because FindFirstFileW() does one readdir() equivalent too
+ * When the first file is returned, this entry is removed from the linked list */
+#ifdef ON_WINDOWS
+typedef struct _JC_DIRENT_T {
+	uint64_t d_ino;
+	char d_name[];
+} JC_DIRENT;
+typedef struct _JC_DIR_T {
+	struct _JC_DIR_T *next;
+	WIN32_FIND_DATA ffd;
+	HANDLE hFind;
+	JC_DIRENT dirent;
+} JC_DIR;
+#else
+ #define JC_DIR DIR
+#endif /* ON_WINDOWS */
+
+extern int32_t jc_errno;
+extern int jc_access(const char *pathname, int mode);
+extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
+extern int jc_link(const char *path1, const char *path2);
+extern JC_DIR *jc_opendir(const char * restrict path);
+extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath);
+extern int jc_remove(const char *pathname);
 
 
 /*** alarm ***/
@@ -234,102 +322,23 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 
 /*** win_unicode ***/
 
-#if defined _WIN32 || defined __WIN32 || defined ON_WINDOWS
- #ifdef UNICODE
-  #define JC_WCHAR_T wchar_t
-  #define JC_FILE_MODE_RDONLY L"rb"
-  #define JC_FILE_MODE_WRONLY L"wb"
-  #define JC_FILE_MODE_RW L"w+b"
-  #define JC_FILE_MODE_RW_EXISTING L"r+b"
-  #define JC_FILE_MODE_WRONLY_APPEND L"ab"
-  #define JC_FILE_MODE_RW_APPEND L"a+b"
-  #define JC_FILE_MODE_RDONLY_SEQ L"rbS"
-  #define JC_FILE_MODE_WRONLY_SEQ L"wbS"
-  #define JC_FILE_MODE_RW_SEQ L"w+bS"
-  #define JC_FILE_MODE_RW_EXISTING_SEQ L"r+bS"
-  #define JC_FILE_MODE_WRONLY_APPEND_SEQ L"abS"
-  #define JC_FILE_MODE_RW_APPEND_SEQ L"a+bS"
- #else /* Windows, not UNICODE */
-  #define JC_WCHAR_T char
-  #define JC_FILE_MODE_RDONLY "rb"
-  #define JC_FILE_MODE_WRONLY "wb"
-  #define JC_FILE_MODE_RW "w+b"
-  #define JC_FILE_MODE_RW_EXISTING "r+b"
-  #define JC_FILE_MODE_WRONLY_APPEND "ab"
-  #define JC_FILE_MODE_RW_APPEND "a+b"
-  #define JC_FILE_MODE_RDONLY_SEQ "rbS"
-  #define JC_FILE_MODE_WRONLY_SEQ "wbS"
-  #define JC_FILE_MODE_RW_SEQ "w+bS"
-  #define JC_FILE_MODE_RW_EXISTING_SEQ "r+bS"
-  #define JC_FILE_MODE_WRONLY_APPEND_SEQ "abS"
-  #define JC_FILE_MODE_RW_APPEND_SEQ "a+bS"
- #endif
- #define JC_F_OK 0
- #define JC_R_OK 4
- #define JC_W_OK 2
- #define JC_X_OK 6
-#else /* Not Windows */
- #define JC_WCHAR_T char
- #define JC_FILE_MODE_RDONLY "rb"
- #define JC_FILE_MODE_WRONLY "wb"
- #define JC_FILE_MODE_RW "w+b"
- #define JC_FILE_MODE_RW_EXISTING "r+b"
- #define JC_FILE_MODE_WRONLY_APPEND "ab"
- #define JC_FILE_MODE_RW_APPEND "a+b"
- #define JC_FILE_MODE_RDONLY_SEQ "rb"
- #define JC_FILE_MODE_WRONLY_SEQ "wb"
- #define JC_FILE_MODE_RW_SEQ "w+b"
- #define JC_FILE_MODE_RW_EXISTING_SEQ "r+b"
- #define JC_FILE_MODE_WRONLY_APPEND_SEQ "ab"
- #define JC_FILE_MODE_RW_APPEND_SEQ "a+b"
- #define JC_F_OK F_OK
- #define JC_R_OK R_OK
- #define JC_W_OK W_OK
- #define JC_X_OK X_OK
-#endif /* Windows */
-
-/* Directory stream type
- * Must be hijacked because FindFirstFileW() does one readdir() equivalent too
- * When the first file is returned, this entry is removed from the linked list */
-#ifdef ON_WINDOWS
-typedef struct _JC_DIRENT_T {
-	uint64_t d_ino;
-	char d_name[];
-} JC_DIRENT;
-typedef struct _JC_DIR_T {
-	struct _JC_DIR_T *next;
-	WIN32_FIND_DATA ffd;
-	HANDLE hFind;
-	JC_DIRENT dirent;
-} JC_DIR;
-#else
- #define JC_DIR DIR
-#endif /* ON_WINDOWS */
-
 /* Cross-platform help for strings in Unicode mode on Windows
  * On non-Windows platforms a lot of these are just wrappers */
-extern int32_t jc_errno;
-extern int jc_access(const char *pathname, int mode);
-extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
-extern int jc_link(const char *path1, const char *path2);
-extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath);
-extern int jc_remove(const char *pathname);
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
 
-extern JC_DIR *jc_opendir(const char * restrict path);
 
-/* Slash conversion is needed on Windows regardless of Unicode support */
 #ifdef ON_WINDOWS
+ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd);
  extern void jc_slash_convert(char *path);
-#endif
 
-/* These are used for Unicode output and string work on Windows only */
-#ifdef UNICODE
- extern void jc_set_output_modes(unsigned int modes);
- extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring);
- extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv);
-#else
- #define jc_slash_convert(a)
-#endif /* UNICODE */
+ /* These are used for Unicode output and string work on Windows only */
+ #ifdef UNICODE
+  extern void jc_set_output_modes(unsigned int modes);
+  extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring);
+  extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv);
+ #else
+  #define jc_slash_convert(a)
+ #endif /* UNICODE */
+#endif
 
 #endif /* LIBJODYCODE_H */
