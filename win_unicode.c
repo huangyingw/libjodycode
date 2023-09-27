@@ -108,10 +108,10 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 {
 #ifdef UNICODE
 	int retval;
-	int stream_mode = out_mode;
+	int stream_mode;
 	JC_WCHAR_T *wstr;
 
-	if (stream == stderr) stream_mode = err_mode;
+	stream_mode = (stream == stderr) ? err_mode : out_mode;
 
 	if (stream_mode == _O_U16TEXT) {
 		/* Convert to wide string and send to wide console output */
