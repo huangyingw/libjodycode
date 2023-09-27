@@ -75,6 +75,7 @@ extern "C" {
 
 
 /*** C standard library functions ***/
+
 #if defined _WIN32 || defined __WIN32 || defined ON_WINDOWS
  #ifdef UNICODE
   #define JC_WCHAR_T wchar_t
@@ -148,12 +149,13 @@ typedef struct _JC_DIR_T {
 #endif /* ON_WINDOWS */
 
 extern int32_t jc_errno;
-extern int jc_access(const char *pathname, int mode);
-extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
-extern int jc_link(const char *path1, const char *path2);
+
+extern int     jc_access(const char *pathname, int mode);
+extern FILE   *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
+extern int     jc_link(const char *path1, const char *path2);
 extern JC_DIR *jc_opendir(const char * restrict path);
-extern int jc_rename(const char * const restrict oldpath, const char * restrict newpath);
-extern int jc_remove(const char *pathname);
+extern int     jc_rename(const char * const restrict oldpath, const char * restrict newpath);
+extern int     jc_remove(const char *pathname);
 
 
 /*** alarm ***/
@@ -338,6 +340,7 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
   extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv);
  #else
   #define jc_slash_convert(a)
+  #define jc_set_output_modes(a)
  #endif /* UNICODE */
 #endif
 
