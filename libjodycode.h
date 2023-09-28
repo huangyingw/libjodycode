@@ -292,7 +292,7 @@ extern const unsigned char jc_api_versiontable[];
 
 /* For Windows: provide stat-style functionality */
 #ifdef ON_WINDOWS
-struct jc_winstat {
+struct JC_STAT {
 	uint64_t st_ino;
 	int64_t st_size;
 	uint32_t st_dev;
@@ -319,6 +319,8 @@ struct jc_winstat {
 extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp);
 extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp);
 extern int jc_win_stat(const char * const filename, struct jc_winstat * const restrict buf);
+#else
+#define JC_STAT stat
 #endif /* ON_WINDOWS */
 
 

@@ -5,17 +5,21 @@
  * Released under The MIT License
  */
 
-/* This code is only useful on Windows */
-#ifdef ON_WINDOWS
 
-#ifndef WIN32_LEAN_AND_MEAN
- #define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
+#include <string.h>
+#include <sys/stat.h>
 #include "likely_unlikely.h"
 #include "libjodycode.h"
+
+#ifdef ON_WINDOWS
+ #ifndef WIN32_LEAN_AND_MEAN
+  #define WIN32_LEAN_AND_MEAN
+ #endif
+ #include <windows.h>
+#endif
 
 
 /* Convert NT epoch to UNIX epoch */
@@ -45,26 +49,29 @@ extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp)
 
 
 /* Get stat()-like extra information for a file on Windows */
-extern int jc_win_stat(const char * const filename, struct jc_winstat * const restrict buf)
+extern int jc_stat(const char *filename, struct JC_STAT *buf)
 {
-	HANDLE hFile;
+	int retval;
+#ifdef ON_WINDOWS
+	HANDLE hFile = INVALID_HANDLE_VALUE;
 	BY_HANDLE_FILE_INFORMATION bhfi;
 	uint64_t timetemp;
+#endif
 
 	if (unlikely(!buf)) return JC_ENULL;
 
-#ifdef UNICODE
+#ifdef ON_WINDOWS
+ #ifdef UNICODE
 	JC_WCHAR_T *widename;
 
 	if (jc_string_to_wstring(filename, &widename) != 0) return JC_EALLOC;
 	hFile = CreateFileW(widename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	free(widename);
-#else
-	hFile = CreateFile(filename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-#endif
-
-	if (unlikely(hFile == INVALID_HANDLE_VALUE)) goto failure;
-	if (unlikely(!GetFileInformationByHandle(hFile, &bhfi))) goto failure2;
+ #else
+	hFile = CreateFileA(filename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+ #endif
+	if (unlikely(hFile == INVALID_HANDLE_VALUE)) goto win_failure;
+	if (unlikely(GetFileInformationByHandle(hFile, &bhfi) == 0)) goto win_failure;
 
 	buf->st_ino = ((uint64_t)(bhfi.nFileIndexHigh) << 32) + (uint64_t)bhfi.nFileIndexLow;
 	buf->st_size = ((int64_t)(bhfi.nFileSizeHigh) << 32) + (int64_t)bhfi.nFileSizeLow;
@@ -79,16 +86,17 @@ extern int jc_win_stat(const char * const filename, struct jc_winstat * const re
 	buf->st_mode = (uint32_t)bhfi.dwFileAttributes;
 
 	CloseHandle(hFile);
-	return 0;
+	retval = 0;
+#else
+	retval = stat(filename, buf);
+	if (retval != 0) jc_errno = errno;
+#endif
+	return retval;
 
-failure:
-	jc_errno = GetLastError();
-	CloseHandle(hFile);
-	return JC_EWIN32API;
-failure2:
-	jc_errno = GetLastError();
-	CloseHandle(hFile);
-	return JC_EWIN32API;
+#ifdef ON_WINDOWS
+win_failure:
+	jc_errno = (int32_t)GetLastError();
+	if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
+	return -1;
+#endif
 }
-
-#endif /* ON_WINDOWS */
