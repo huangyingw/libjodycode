@@ -4,6 +4,7 @@
  * Released under The MIT License
  */
 
+#include <stddef.h>
 #include <stdint.h>
 #include "likely_unlikely.h"
 
