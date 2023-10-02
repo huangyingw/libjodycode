@@ -39,7 +39,7 @@ extern int jc_remove(const char *pathname)
 	}
 	retval = DeleteFileW(widename) ? 0 : -1;
 	free(widename);
-	if (retval != 0) jc_errno = (int32_t)GetLastError();
+	if (retval != 0) jc_errno = jc_GetLastError();
 #else
 	retval = remove(pathname);
 	if (retval != 0) jc_errno = errno;

@@ -39,7 +39,7 @@ extern int jc_rename(const char * const restrict oldpath, const char * restrict 
 	}
 	retval = MoveFileW(wideold, widenew) ? 0 : -1;
 	free(wideold); free(widenew);
-	if (retval != 0) jc_errno = GetLastError();
+	if (retval != 0) jc_errno = jc_GetLastError();
 #else
 	retval = rename(oldpath, newpath);
 	if (retval != 0) jc_errno = errno;

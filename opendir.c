@@ -62,7 +62,7 @@ extern JC_DIR *jc_opendir(const char * restrict path)
 	return dirp;
 
 error_fff:
-	jc_errno = (int32_t)GetLastError();
+	jc_errno = jc_GetLastError();
 error_fff_after:
 	return NULL;
 error_nomem:

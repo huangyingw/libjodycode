@@ -95,7 +95,7 @@ extern int jc_stat(const char *filename, struct JC_STAT *buf)
 
 #ifdef ON_WINDOWS
 win_failure:
-	jc_errno = (int32_t)GetLastError();
+	jc_errno = jc_GetLastError();
 	if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
 	return -1;
 #endif

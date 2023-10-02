@@ -42,7 +42,7 @@ extern int jc_link(const char *path1, const char *path2)
  #else
 	if (CreateHardLink(path2, path1, NULL) != 0) retval = -1;
  #endif  /* UNICODE */
-	if (retval != 0) jc_errno = (int32_t)GetLastError();
+	if (retval != 0) jc_errno = jc_GetLastError();
 #else
 	retval = link(path1, path2);
 	if (retval != 0) jc_errno = errno;

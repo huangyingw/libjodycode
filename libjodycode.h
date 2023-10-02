@@ -39,25 +39,27 @@ extern "C" {
  #endif
 #endif
 
-#include <dirent.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #ifdef ON_WINDOWS
  #ifndef WIN32_LEAN_AND_MEAN
   #define WIN32_LEAN_AND_MAN
  #endif
  #include <windows.h>
-  /* Unicode conversion on Windows */
-  #ifndef M2W
-   #define M2W(a,b) MultiByteToWideChar(CP_UTF8, 0, a, -1, (LPWSTR)b, WPATH_MAX)
-  #endif
-  #ifndef W2M
-   #define W2M(a,b) WideCharToMultiByte(CP_UTF8, 0, a, -1, (LPSTR)b, WPATH_MAX, NULL, NULL)
-  #endif
+ /* Unicode conversion on Windows */
+ #ifndef M2W
+  #define M2W(a,b) MultiByteToWideChar(CP_UTF8, 0, a, -1, (LPWSTR)b, WPATH_MAX)
+ #endif
+ #ifndef W2M
+  #define W2M(a,b) WideCharToMultiByte(CP_UTF8, 0, a, -1, (LPSTR)b, WPATH_MAX, NULL, NULL)
+ #endif
+ #define jc_GetLastError() (int32_t)GetLastError()
+#else
+#include <dirent.h>
+#include <unistd.h>
 #endif /* ON_WINDOWS */
 
 #ifdef UNICODE
@@ -304,21 +306,21 @@ struct JC_STAT {
 };
 
 /* stat() macros for Windows "mode" flags (file attributes) */
-#define S_ISARCHIVE(st_mode) ((st_mode & FILE_ATTRIBUTE_ARCHIVE) ? 1 : 0)
-#define S_ISRO(st_mode) ((st_mode & FILE_ATTRIBUTE_READONLY) ? 1 : 0)
-#define S_ISHIDDEN(st_mode) ((st_mode & FILE_ATTRIBUTE_HIDDEN) ? 1 : 0)
-#define S_ISSYSTEM(st_mode) ((st_mode & FILE_ATTRIBUTE_SYSTEM) ? 1 : 0)
-#define S_ISCRYPT(st_mode) ((st_mode & FILE_ATTRIBUTE_ENCRYPTED) ? 1 : 0)
-#define S_ISDIR(st_mode) ((st_mode & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0)
-#define S_ISCOMPR(st_mode) ((st_mode & FILE_ATTRIBUTE_COMPRESSED) ? 1 : 0)
-#define S_ISREPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0)
-#define S_ISSPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_SPARSE) ? 1 : 0)
-#define S_ISTEMP(st_mode) ((st_mode & FILE_ATTRIBUTE_TEMPORARY) ? 1 : 0)
-#define S_ISREG(st_mode) ((st_mode & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ? 0 : 1)
+#define JC_S_ISARCHIVE(st_mode) ((st_mode & FILE_ATTRIBUTE_ARCHIVE) ? 1 : 0)
+#define JC_S_ISRO(st_mode) ((st_mode & FILE_ATTRIBUTE_READONLY) ? 1 : 0)
+#define JC_S_ISHIDDEN(st_mode) ((st_mode & FILE_ATTRIBUTE_HIDDEN) ? 1 : 0)
+#define JC_S_ISSYSTEM(st_mode) ((st_mode & FILE_ATTRIBUTE_SYSTEM) ? 1 : 0)
+#define JC_S_ISCRYPT(st_mode) ((st_mode & FILE_ATTRIBUTE_ENCRYPTED) ? 1 : 0)
+#define JC_S_ISDIR(st_mode) ((st_mode & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0)
+#define JC_S_ISCOMPR(st_mode) ((st_mode & FILE_ATTRIBUTE_COMPRESSED) ? 1 : 0)
+#define JC_S_ISREPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0)
+#define JC_S_ISSPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_SPARSE) ? 1 : 0)
+#define JC_S_ISTEMP(st_mode) ((st_mode & FILE_ATTRIBUTE_TEMPORARY) ? 1 : 0)
+#define JC_S_ISREG(st_mode) ((st_mode & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ? 0 : 1)
 
 extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp);
 extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp);
-extern int jc_win_stat(const char * const filename, struct jc_winstat * const restrict buf);
+extern int jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
 #else
 #define JC_STAT stat
 #endif /* ON_WINDOWS */

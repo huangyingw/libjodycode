@@ -89,7 +89,7 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 	for (int counter = 0; counter < argc; counter++) {
 		len = W2M(wargv[counter], &temp);
 		if (unlikely(len < 1)) {
-			jc_errno = (int32_t)GetLastError();
+			jc_errno = jc_GetLastError();
 			return JC_EBADARGV;
 		}
 
@@ -165,7 +165,7 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 	return 0;
 
 error_name:
-	jc_errno = (int32_t)GetLastError();
+	jc_errno = jc_GetLastError();
 error_nomem:
 #ifdef UNICODE
 	if (tempname != NULL) free(tempname);
