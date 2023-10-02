@@ -12,13 +12,14 @@
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 
-#ifdef UNICODE
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <io.h>
-static int out_mode = _O_TEXT;
-static int err_mode = _O_TEXT;
-#endif
+#ifdef ON_WINDOWS
+ #define WIN32_LEAN_AND_MEAN
+ #include <windows.h>
+ #include <io.h>
+
+ static int out_mode = _O_TEXT;
+ static int err_mode = _O_TEXT;
+#endif  /* ON_WINDOWS */
 
 #ifdef ON_WINDOWS
 /* Convert slashes to backslashes in a file path */

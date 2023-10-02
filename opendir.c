@@ -11,9 +11,8 @@
 #include "libjodycode.h"
 
 #ifdef UNICODE
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <io.h>
+ #define WIN32_LEAN_AND_MEAN
+ #include <windows.h>
 #endif
 
 

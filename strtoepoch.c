@@ -5,7 +5,6 @@
  */
 
 #include <string.h>
-#include <sys/time.h>
 #include <time.h>
 #include "likely_unlikely.h"
 #include "libjodycode.h"

@@ -7,10 +7,10 @@
 
 
 #include <errno.h>
-#include <limits.h>
 #include <stdint.h>
-#include <string.h>
-#include <sys/stat.h>
+#ifndef ON_WINDOWS
+ #include <sys/stat.h>
+#endif
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 

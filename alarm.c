@@ -18,8 +18,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "libjodycode.h"
 #include "likely_unlikely.h"
+#include "libjodycode.h"
 
 int jc_alarm_ring = 0;
 

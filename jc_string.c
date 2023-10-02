@@ -5,9 +5,7 @@
  */
 
 #include <stdint.h>
-#include <unistd.h>
 #include "likely_unlikely.h"
-#include "libjodycode.h"
 
 /* Like strncasecmp() but only tests for equality */
 extern int jc_strncaseeq(const char *s1, const char *s2, size_t len)
