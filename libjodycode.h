@@ -77,6 +77,40 @@ extern "C" {
 
 /*** C standard library functions ***/
 
+/* For Windows: provide stat-style functionality */
+#ifdef ON_WINDOWS
+struct JC_STAT {
+	uint64_t st_ino;
+	int64_t st_size;
+	uint32_t st_dev;
+	uint32_t st_nlink;
+	uint32_t st_mode;
+	time_t st_ctime;
+	time_t st_mtime;
+	time_t st_atime;
+};
+
+/* stat() macros for Windows "mode" flags (file attributes) */
+ #define JC_S_ISARCHIVE(st_mode) ((st_mode & FILE_ATTRIBUTE_ARCHIVE) ? 1 : 0)
+ #define JC_S_ISRO(st_mode) ((st_mode & FILE_ATTRIBUTE_READONLY) ? 1 : 0)
+ #define JC_S_ISHIDDEN(st_mode) ((st_mode & FILE_ATTRIBUTE_HIDDEN) ? 1 : 0)
+ #define JC_S_ISSYSTEM(st_mode) ((st_mode & FILE_ATTRIBUTE_SYSTEM) ? 1 : 0)
+ #define JC_S_ISCRYPT(st_mode) ((st_mode & FILE_ATTRIBUTE_ENCRYPTED) ? 1 : 0)
+ #define JC_S_ISDIR(st_mode) ((st_mode & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0)
+ #define JC_S_ISCOMPR(st_mode) ((st_mode & FILE_ATTRIBUTE_COMPRESSED) ? 1 : 0)
+ #define JC_S_ISREPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0)
+ #define JC_S_ISSPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_SPARSE) ? 1 : 0)
+ #define JC_S_ISTEMP(st_mode) ((st_mode & FILE_ATTRIBUTE_TEMPORARY) ? 1 : 0)
+ #define JC_S_ISREG(st_mode) ((st_mode & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ? 0 : 1)
+
+ extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp);
+ extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp);
+#else
+ #include <sys/stat.h>
+ #define JC_STAT stat
+#endif /* ON_WINDOWS */
+
+
 #if defined _WIN32 || defined __WIN32 || defined ON_WINDOWS
  #ifdef UNICODE
   #define JC_WCHAR_T wchar_t
@@ -155,8 +189,9 @@ extern int     jc_access(const char *pathname, int mode);
 extern FILE   *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int     jc_link(const char *path1, const char *path2);
 extern JC_DIR *jc_opendir(const char * restrict path);
-extern int     jc_rename(const char * const restrict oldpath, const char * restrict newpath);
+extern int     jc_rename(const char *oldpath, const char *newpath);
 extern int     jc_remove(const char *pathname);
+extern int     jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
 
 
 /*** alarm ***/
@@ -287,42 +322,6 @@ extern const int jc_jodyhash_version;
 extern const int jc_windows_unicode;
 /* This table is used for API compatibility checks */
 extern const unsigned char jc_api_versiontable[];
-
-
-/*** win_stat ***/
-
-/* For Windows: provide stat-style functionality */
-#ifdef ON_WINDOWS
-struct JC_STAT {
-	uint64_t st_ino;
-	int64_t st_size;
-	uint32_t st_dev;
-	uint32_t st_nlink;
-	uint32_t st_mode;
-	time_t st_ctime;
-	time_t st_mtime;
-	time_t st_atime;
-};
-
-/* stat() macros for Windows "mode" flags (file attributes) */
- #define JC_S_ISARCHIVE(st_mode) ((st_mode & FILE_ATTRIBUTE_ARCHIVE) ? 1 : 0)
- #define JC_S_ISRO(st_mode) ((st_mode & FILE_ATTRIBUTE_READONLY) ? 1 : 0)
- #define JC_S_ISHIDDEN(st_mode) ((st_mode & FILE_ATTRIBUTE_HIDDEN) ? 1 : 0)
- #define JC_S_ISSYSTEM(st_mode) ((st_mode & FILE_ATTRIBUTE_SYSTEM) ? 1 : 0)
- #define JC_S_ISCRYPT(st_mode) ((st_mode & FILE_ATTRIBUTE_ENCRYPTED) ? 1 : 0)
- #define JC_S_ISDIR(st_mode) ((st_mode & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0)
- #define JC_S_ISCOMPR(st_mode) ((st_mode & FILE_ATTRIBUTE_COMPRESSED) ? 1 : 0)
- #define JC_S_ISREPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0)
- #define JC_S_ISSPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_SPARSE) ? 1 : 0)
- #define JC_S_ISTEMP(st_mode) ((st_mode & FILE_ATTRIBUTE_TEMPORARY) ? 1 : 0)
- #define JC_S_ISREG(st_mode) ((st_mode & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ? 0 : 1)
-
- extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp);
- extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp);
- extern int jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
-#else
- #define JC_STAT stat
-#endif /* ON_WINDOWS */
 
 
 /*** win_unicode ***/

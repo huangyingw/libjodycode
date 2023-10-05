@@ -21,6 +21,7 @@
  #define MUL10(a) (a * 10)
 #endif /* STRTOEPOCH_USE_SHIFT_MULTIPLY */
 
+
 /* Accepts date[time] strings "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS"
  * and returns the number of seconds since the Unix Epoch a la mktime()
  * or returns -1 on any error */
@@ -75,3 +76,31 @@ skip_time:
 	secs = mktime(&tm);
 	return secs;
 }
+
+
+#ifdef ON_WINDOWS
+/* Convert NT epoch to UNIX epoch */
+extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp)
+{
+	uint64_t newstamp;
+
+	memcpy(&newstamp, timestamp, sizeof(uint64_t));
+	newstamp /= 10000000LL;
+	if (unlikely(newstamp <= 11644473600LL)) return 0;
+	newstamp -= 11644473600LL;
+	return (time_t)newstamp;
+}
+
+
+/* Convert UNIX epoch to NT epoch */
+extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp)
+{
+	uint64_t newstamp;
+
+	memcpy(&newstamp, timestamp, sizeof(uint64_t));
+	newstamp += 11644473600LL;
+	newstamp *= 10000000LL;
+	if (unlikely(newstamp <= 11644473600LL)) return 0;
+	return (time_t)newstamp;
+}
+#endif  /* ON_WINDOWS */

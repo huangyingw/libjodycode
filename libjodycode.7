@@ -6,6 +6,16 @@ libjodycode \- shared code used by several tools written by Jody Bruchon
 .SH SYNOPSIS
 .B #include <libjodycode.h>
 
+.SS "Standard calls API"
+.nf
+.BI "int jc_access(const char *" pathname ", int " mode ")"
+.BI "FILE *jc_fopen(const char *" pathname ", const JC_WCHAR_T *" mode ")"
+.BI "int jc_fwprint(FILE * const restrict " stream ", const char * const restrict " str ", const int " cr ")"
+.BI "int jc_link(const char *" path1 ", const char *" path2 ");"
+.BI "int jc_rename(const char *" oldpath ", const char *" newpath ")"
+.BI "int jc_remove(const char *" pathname ")"
+.BI "int jc_stat(const char *" filename ", struct JC_STAT *" buf ")"
+
 .SS "Alarm API"
 .nf
 .BI "int jc_alarm_ring"
@@ -33,7 +43,7 @@ version of jody_hash the library currently uses
 .BI "void jc_oom(const char * const restrict " msg ")"
 .BI "void jc_nullptr(const char * restrict " func ")"
 
-.SS "Paths API"
+.SS "Path manipulation API"
 .nf
 .BI "int jc_collapse_dotdot(char * const " path ")"
 .BI "int jc_make_relative_link_name(const char * const " src ", const char * const " dest ", char *" rel_path ")"
@@ -42,13 +52,9 @@ version of jody_hash the library currently uses
 .nf
 .BI "const struct jc_size_suffix jc_size_suffix[]"
 
-.SS "Sort API"
+.SS "Numerically correct string comparison API"
 .nf
-.BI "int jc_numeric_sort(char * restrict " c1 ", char * restrict " c2 ", int " sort_direction ")"
-
-.SS "String-to-epoch API"
-.nf
-.BI "time_t jc_strtoepoch(const char * const " datetime ")"
+.BI "int jc_numeric_strcmp(char * restrict " c1 ", char * restrict " c2 ")"
 
 .SS "String API"
 .nf
@@ -56,6 +62,12 @@ version of jody_hash the library currently uses
 .BI "int jc_strcaseeq(const char *" s1 ", const char *" s2 ")"
 .BI "int jc_strneq(const char *" s1 ", const char *" s2 ", size_t " len ")"
 .BI "int jc_streq(const char *" s1 ", const char *" s2 ")"
+
+.SS "Time API"
+.nf
+.BI "time_t jc_strtoepoch(const char * const " datetime ")"
+.BI "time_t jc_nttime_to_unixtime(const uint64_t * const restrict " timestamp ")"
+.BI "time_t jc_unixtime_to_nttime(const uint64_t * const restrict " timestamp ")"
 
 .SS "Version API"
 .nf
@@ -65,12 +77,6 @@ version of jody_hash the library currently uses
 .BI "const int jc_api_featurelevel"
 .BI "const int jc_jodyhash_version"
 .BI "const unsigned char jc_api_versiontable[]"
-
-.SS "Windows stat() API"
-.nf
-.BI "time_t jc_nttime_to_unixtime(const uint64_t * const restrict " timestamp ")"
-.BI "time_t jc_unixtime_to_nttime(const uint64_t * const restrict " timestamp ")"
-.BI "int jc_win_stat(const char * const " filename ", struct jc_winstat * const restrict " buf ")"
 
 .SS "Windows stat() mode test definitions"
 .IP S_ISARCHIVE(st_mode) 22
@@ -98,12 +104,6 @@ is it a regular file?
 
 .SS "Windows Unicode API"
 .nf
-.BI "int jc_access(const char *" pathname ", int " mode ")"
-.BI "FILE *jc_fopen(const char *" pathname ", const JC_WCHAR_T *" mode ")"
-.BI "int jc_fwprint(FILE * const restrict " stream ", const char * const restrict " str ", const int " cr ")"
-.BI "int jc_link(const char *" path1 ", const char *" path2 ");"
-.BI "int jc_rename(const char * const restrict " oldpath ", const char * restrict " newpath ")"
-.BI "int jc_remove(const char *" pathname ")"
 .BI "void jc_set_output_modes(unsigned int " modes ")"
 .BI "void jc_slash_convert(char *" path ")"
 .BI "int jc_string_to_wstring(const char * const restrict " string ", JC_WCHAR_T **" wstring ")"

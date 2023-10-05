@@ -22,32 +22,6 @@
 #endif
 
 
-/* Convert NT epoch to UNIX epoch */
-extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp)
-{
-	uint64_t newstamp;
-
-	memcpy(&newstamp, timestamp, sizeof(uint64_t));
-	newstamp /= 10000000LL;
-	if (unlikely(newstamp <= 11644473600LL)) return 0;
-	newstamp -= 11644473600LL;
-	return (time_t)newstamp;
-}
-
-
-/* Convert UNIX epoch to NT epoch */
-extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp)
-{
-	uint64_t newstamp;
-
-	memcpy(&newstamp, timestamp, sizeof(uint64_t));
-	newstamp += 11644473600LL;
-	newstamp *= 10000000LL;
-	if (unlikely(newstamp <= 11644473600LL)) return 0;
-	return (time_t)newstamp;
-}
-
-
 /* Get stat()-like extra information for a file on Windows */
 extern int jc_stat(const char *filename, struct JC_STAT *buf)
 {
