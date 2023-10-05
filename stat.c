@@ -1,5 +1,4 @@
-/*
- * Windows-native code for getting stat()-like information
+/* libjodycode: Windows-native code for getting stat()-like information
  *
  * Copyright (C) 2016-2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License
@@ -8,6 +7,7 @@
 
 #include <errno.h>
 #include <stdint.h>
+#include <string.h>
 #ifndef ON_WINDOWS
  #include <sys/stat.h>
 #endif

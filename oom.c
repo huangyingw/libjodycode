@@ -1,4 +1,4 @@
-/* Out-of-memory and NULL pointer error exit calls
+/* libjodycoe: out-of-memory and NULL pointer error exits
  *
  * Copyright (C) 2021-2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License

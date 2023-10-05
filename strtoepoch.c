@@ -1,4 +1,4 @@
-/* Jody Bruchon's datetime-to-epoch conversion function
+/* libjodycode: datetime string to UNIX epoch conversion
  *
  * Copyright (C) 2020-2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License

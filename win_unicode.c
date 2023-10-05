@@ -1,4 +1,4 @@
-/* libjodycode: stdio calls
+/* libjodycode: Windows Unicode support helper code
  *
  * Copyright (C) 2014-2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License
@@ -16,9 +16,6 @@
  #define WIN32_LEAN_AND_MEAN
  #include <windows.h>
  #include <io.h>
-
- static int out_mode = _O_TEXT;
- static int err_mode = _O_TEXT;
 #endif  /* ON_WINDOWS */
 
 #ifdef ON_WINDOWS
@@ -35,51 +32,6 @@ extern void jc_slash_convert(char *path)
 
 
 #ifdef UNICODE
-/* Set output modes to TEXT, BINARY, or UTF-16 */
-extern void jc_set_output_modes(unsigned int modes)
-{
-	/* Mode is selected by setting a bit flag:
-	 * 0x01 = 1: set stdout mode to UTF-16
-	 * 0x02 = 1: set stderr mode to UTF-16
-	 * 0x04 = 1: set stdout mode to UTF-16 only if it is a terminal
-	 * 0x08 = 1: set stderr mode to UTF-16 only if it is a terminal
-	 * 0x10 = 1: set flagged outputs to text mode instead
-	 * If not setting UTF-16, all modes default to BINARY without 0x10 set
-	 * */
-	if (modes & 0x10U) {
-		out_mode = (modes & 0x01U) ? _O_TEXT : out_mode;
-		err_mode = (modes & 0x02U) ? _O_TEXT : err_mode;
-		return;
-	}
-	if (modes & 0x04U) {
-		/* Only use UTF-16 for terminal output, else use UTF-8 */
-		if (!_isatty(_fileno(stdout))) out_mode = _O_BINARY;
-		else out_mode = _O_U16TEXT;
-	} else if (modes & 0x08U) {
-		if (!_isatty(_fileno(stderr))) err_mode = _O_BINARY;
-		else err_mode = _O_U16TEXT;
-	} else {
-		out_mode = (modes & 0x01U) ? _O_U16TEXT : _O_BINARY;
-		err_mode = (modes & 0x02U) ? _O_U16TEXT : _O_BINARY;
-	}
-	return;
-}
-
-
-/* Copy a string to a wide string - wstring must be freed by the caller */
-extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
-{
-	if (unlikely(wstring == NULL)) return JC_ENULL;
-	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
-	if (unlikely(*wstring == NULL)) return JC_EALLOC;
-	if (unlikely(!M2W(string, *wstring))) {
-		free(*wstring);
-		return JC_EMBWC;
-	}
-	return 0;
-}
-
-
 /* Copy Windows wide character arguments to UTF-8 */
 extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 {
@@ -100,39 +52,7 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 	}
 	return 0;
 }
-
 #endif /* UNICODE */
-
-
-/* Print a string that is wide on Windows but normal on POSIX */
-extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr)
-{
-#ifdef UNICODE
-	int retval;
-	int stream_mode;
-	JC_WCHAR_T *wstr;
-
-	stream_mode = (stream == stderr) ? err_mode : out_mode;
-
-	if (stream_mode == _O_U16TEXT) {
-		/* Convert to wide string and send to wide console output */
-		if(jc_string_to_wstring(str, &wstr) != 0) return JC_EALLOC;
-		fflush(stream);
-		_setmode(_fileno(stream), stream_mode);
-		if (cr == 2) retval = fwprintf(stream, L"%S%C", wstr, 0);
-		else retval = fwprintf(stream, L"%S%S", wstr, cr == 1 ? L"\n" : L"");
-		fflush(stream);
-		_setmode(_fileno(stream), _O_TEXT);
-		free(wstr);
-		return retval;
-	} else {
-#endif
-		if (cr == 2) return fprintf(stream, "%s%c", str, 0);
-		else return fprintf(stream, "%s%s", str, cr == 1 ? "\n" : "");
-#ifdef UNICODE
-	}
-#endif
-}
 
 
 #ifdef ON_WINDOWS

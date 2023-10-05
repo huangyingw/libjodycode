@@ -1,4 +1,4 @@
-/* Wrapper stub for jody_hash
+/* libjodycode: wrapper stub for jody_hash
  *
  * Copyright (C) 2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License

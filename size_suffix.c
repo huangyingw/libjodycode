@@ -1,4 +1,4 @@
-/* List of data size suffixes
+/* libjodycode: list of data size suffixes and multipliers/binary shifts
  *
  * Copyright (C) 2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License

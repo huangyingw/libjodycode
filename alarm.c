@@ -1,4 +1,4 @@
-/* Cross-platform alarms
+/* libjodycode: cross-platform alarms
  *
  * Copyright (C) 2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License

@@ -1,4 +1,4 @@
-/* libjodycode: stdio calls
+/* libjodycode: fopen() stdio call
  *
  * Copyright (C) 2014-2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License

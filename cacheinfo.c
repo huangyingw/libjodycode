@@ -1,4 +1,4 @@
-/* Detect and report size of CPU caches
+/* libjodycode: detect and report size of CPU caches on Linux
  *
  * Copyright (C) 2017-2023 by Jody Bruchon <jody@jodybruchon.com>
  * Distributed under The MIT License

@@ -1,4 +1,4 @@
-/* libjodycode error strings and printing functions
+/* libjodycode: error strings and printing functions
  *
  * Copyright (C) 2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License
@@ -29,7 +29,7 @@ static const struct jc_error jc_error_list[JC_ERRCNT + 1] = {
 	{ "mb_wc_fail",  "a multibyte/wide char conversion failed" },  // 7
 	{ "alarm_fail",  "alarm call failed" },  // 8
 	{ "alloc_fail",  "memory allocation failed" },  // 9
-	{ "numsort",     "jc_numeric_sort() was passed a NULL pointer" },  // 10
+	{ "numstrcmp",   "jc_numeric_strcmp() was passed a NULL pointer" },  // 10
 	{ "datetime",    "date/time string is invalid" },  // 11
 	{ "win32api",    "a Win32 API call failed" },  // 12
 	{ NULL, NULL },  // 13

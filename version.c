@@ -1,4 +1,4 @@
-/* libjodycode version function
+/* libjodycode: versioning information
  *
  * Copyright (C) 2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License

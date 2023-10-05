@@ -22,9 +22,9 @@ extern "C" {
  * supports the used interfaces should be chosen by programs that check
  * version information for compatibility. See README for more information. */
 #define LIBJODYCODE_API_VERSION       4
-#define LIBJODYCODE_API_FEATURE_LEVEL 3
+#define LIBJODYCODE_API_FEATURE_LEVEL 4
 #define LIBJODYCODE_VER               "4.0"
-#define LIBJODYCODE_VERDATE           "2023-09-26"
+#define LIBJODYCODE_VERDATE           "2023-10-05"
 #ifdef UNICODE
  #define LIBJODYCODE_WINDOWS_UNICODE  1
 #else
@@ -41,7 +41,6 @@ extern "C" {
 
 #include <stdio.h>
 #include <stdint.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 
 #ifdef ON_WINDOWS
@@ -199,19 +198,19 @@ extern const char *jc_get_errname(int errnum);
 extern const char *jc_get_errdesc(int errnum);
 extern int jc_print_error(int errnum);
 
-#define JC_ENOERROR  0
-#define JC_ENULL     1
-#define JC_EGETCWD   2
-#define JC_ECDOTDOT  3
-#define JC_EGRNEND   4
-#define JC_EBADERR   5
-#define JC_EBADARGV  6
-#define JC_EMBWC     7
-#define JC_EALARM    8
-#define JC_EALLOC    9
-#define JC_ENUMSORT  10
-#define JC_EDATETIME 11
-#define JC_EWIN32API 12
+#define JC_ENOERROR   0
+#define JC_ENULL      1
+#define JC_EGETCWD    2
+#define JC_ECDOTDOT   3
+#define JC_EGRNEND    4
+#define JC_EBADERR    5
+#define JC_EBADARGV   6
+#define JC_EMBWC      7
+#define JC_EALARM     8
+#define JC_EALLOC     9
+#define JC_ENUMSTRCMP 10
+#define JC_EDATETIME  11
+#define JC_EWIN32API  12
 
 
 
@@ -258,7 +257,7 @@ extern const struct jc_size_suffix jc_size_suffix[];
 /*** sort ***/
 
 /* Numerically-correct string sort with a little extra intelligence */
-extern int jc_numeric_sort(char * restrict c1, char * restrict c2, int sort_direction);
+extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2);
 
 
 /*** string ***/
@@ -330,22 +329,31 @@ struct JC_STAT {
 
 /* Cross-platform help for strings in Unicode mode on Windows
  * On non-Windows platforms a lot of these are just wrappers */
+
 extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
 
-
 #ifdef ON_WINDOWS
+ #define JC_MODE_NO_CHANGE 0  /* Don't change the output mode */
+ #define JC_MODE_TEXT      1  /* Set output mode to _O_TEXT */
+ #define JC_MODE_BINARY    2  /* Set output mode to _O_BINARY (UTF-8) */
+ #define JC_MODE_UTF16     3  /* Set output mode to _O_U16TEXT (UTF-16) */
+ #define JC_MODE_UTF16_TTY 4  /* Set non-_O_TEXT output mode based on if it's a terminal or not */
+
  extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd);
  extern void jc_slash_convert(char *path);
 
  /* These are used for Unicode output and string work on Windows only */
  #ifdef UNICODE
-  extern void jc_set_output_modes(unsigned int modes);
+  extern void jc_set_output_modes(int out, int err);
   extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring);
   extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv);
  #else
   #define jc_slash_convert(a)
   #define jc_set_output_modes(a)
  #endif /* UNICODE */
+#else
+ #define jc_slash_convert(a)
+ #define jc_set_output_modes(a)
 #endif
 
 #endif /* LIBJODYCODE_H */
