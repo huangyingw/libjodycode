@@ -21,20 +21,13 @@ extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2)
 
   if (unlikely(c1 == NULL || c2 == NULL)) return JC_ENUMSTRCMP;
 
-  /* Numerically correct sort */
   while (unlikely(*c1 != '\0' && *c2 != '\0')) {
     /* Reset string length counters and rewind points */
     len1 = 0; len2 = 0; rewind1 = c1; rewind2 = c2;
 
     /* Skip all sequences of zeroes */
-    while (*c1 == '0') {
-      len1++;
-      c1++;
-    }
-    while (*c2 == '0') {
-      len2++;
-      c2++;
-    }
+    for (; *c1 == '0'; c1++, len1++);
+    for (; *c2 == '0'; c2++, len2++);
 
     /* If both chars are numeric, do a numeric comparison */
     if (IS_NUM(*c1) && IS_NUM(*c2)) {
@@ -49,17 +42,14 @@ extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2)
 
         /* Skip remaining digit pairs after any difference is found */
         if (precompare != 0) {
-          while (IS_NUM(*c1) && IS_NUM(*c2)) {
-            len1++; len2++;
-            c1++; c2++;
-          }
+          for (; IS_NUM(*c1) && IS_NUM(*c2); len1++, len2++, c1++, c2++);
           break;
         }
       }
 
       /* One numeric and one non-numeric means the numeric one is larger and sorts later */
       if (IS_NUM(*c1) ^ IS_NUM(*c2)) {
-        if (IS_NUM(*c1)) return 1;
+        if (IS_NUM(*c1) != 0) return 1;
         else return -1;
       }
 
@@ -68,19 +58,19 @@ extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2)
       if (precompare != 0) return precompare;
     } else {
       /* Zeroes aren't followed by a digit; rewind the streams */
-      c1 = rewind1; c2 = rewind2;
-      len1 = 0; len2 = 0;
+      c1 = rewind1; c2 = rewind2; len1 = 0; len2 = 0;
     }
 
     /* Do normal comparison */
     if (likely(*c1 == *c2 && *c1 != '\0' && *c2 != '\0')) {
-      c1++; c2++;
-      len1++; len2++;
+      c1++; c2++; len1++; len2++;
     /* Put symbols and spaces after everything else */
-    } else if (*c2 < '.' && *c1 >= '.') return -1;
-    else if (*c1 < '.' && *c2 >= '.') return 1;
-    /* Normal strcasecmp() style compare */
-    else {
+    } else if (*c2 < '.' && *c1 >= '.') {
+      return -1;
+    } else if (*c1 < '.' && *c2 >= '.') {
+      return 1;
+    } else {
+      /* Normal strcasecmp() style compare */
       char s1 = *c1, s2 = *c2;
       /* Convert lowercase into uppercase */
       if (IS_LOWER(s1)) s1 = (char)(s1 - 32);

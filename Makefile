@@ -118,7 +118,7 @@ LDFLAGS += $(LINK_OPTIONS)
 
 OBJS += access.o alarm.o cacheinfo.o error.o fopen.o
 OBJS += jc_block_hash.o jc_fwprint.o jc_string.o jody_hash.o link.o
-OBJS += jc_numeric_strcmp.o oom.o opendir.o paths.o remove.o
+OBJS += jc_numstrcmp.o oom.o opendir.o paths.o remove.o
 OBJS += rename.o size_suffix.o stat.o
 OBJS += strtoepoch.o version.o win_unicode.o
 OBJS += $(ADDITIONAL_OBJECTS)
