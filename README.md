@@ -44,9 +44,12 @@ to the caller with a non-zero return value.
 
 Contact information
 -------------------------------------------------------------------------------
-Bug reports/feature requests: https://github.com/jbruchon/libjodycode/issues
+General information, help, and tech info: https://www.jdupes.com/
 
-All other libjodycode inquiries: contact Jody Bruchon <jody@jodybruchon.com>
+Development, source code, releases: https://codeberg.org/jbruchon/libjodycode
+
+Have a bug report or questions? contact Jody Bruchon <jody@jodybruchon.com>
+
 
 
 Legal information and software license
