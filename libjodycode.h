@@ -213,14 +213,15 @@ typedef struct _JC_DIR_T {
 
 extern int32_t jc_errno;
 
-extern int     jc_access(const char *pathname, int mode);
-extern char   *jc_getcwd(char *pathname, size_t size);
-extern FILE   *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
-extern int     jc_link(const char *path1, const char *path2);
-extern JC_DIR *jc_opendir(const char * restrict path);
-extern int     jc_rename(const char *oldpath, const char *newpath);
-extern int     jc_remove(const char *pathname);
-extern int     jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
+extern int        jc_access(const char *pathname, int mode);
+extern char      *jc_getcwd(char *pathname, size_t size);
+extern FILE      *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
+extern int        jc_link(const char *path1, const char *path2);
+extern JC_DIR    *jc_opendir(const char * restrict path);
+extern JC_DIRENT *jc_readdir(JC_DIR *dirp);
+extern int        jc_rename(const char *oldpath, const char *newpath);
+extern int        jc_remove(const char *pathname);
+extern int        jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
 
 
 /*** alarm ***/
