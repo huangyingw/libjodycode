@@ -22,6 +22,20 @@
 
 
 #ifdef ON_WINDOWS
+/* Copy a string to a wide string - wstring must be freed by the caller */
+extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
+{
+	if (unlikely(wstring == NULL)) return JC_ENULL;
+	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
+	if (unlikely(*wstring == NULL)) return JC_EALLOC;
+	if (unlikely(!M2W(string, *wstring))) {
+		free(*wstring);
+		return JC_EMBWC;
+	}
+	return 0;
+}
+
+
 /* Set jc_fwprint output modes for stdout/stderr to TEXT, BINARY, or UTF-16
  * 0: no change
  * 1: set to text mode
@@ -31,7 +45,7 @@
  */
 extern void jc_set_output_modes(int out, int err)
 {
-	switch (jc_out_mode) {
+	switch (out) {
 		default:
 		case 0:
 			break;
@@ -50,7 +64,7 @@ extern void jc_set_output_modes(int out, int err)
 			break;
 	}
 
-	switch (jc_err_mode) {
+	switch (err) {
 		default:
 		case 0:
 			break;
@@ -86,7 +100,7 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 
 	if (stream_mode == _O_U16TEXT) {
 		/* Convert to wide string and send to wide console output */
-		if(jc_string_to_wstring(str, &wstr) != 0) return JC_EALLOC;
+		if (jc_string_to_wstring(str, &wstr) != 0) return JC_EALLOC;
 		fflush(stream);
 		_setmode(_fileno(stream), stream_mode);
 		if (cr == 2) retval = fwprintf(stream, L"%S%C", wstr, 0);
