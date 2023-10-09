@@ -99,8 +99,10 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 	// TODO: populate JC_DIR stuff
 	return 0;
 
+#ifdef UNICODE
 error_name:
 	jc_errno = jc_GetLastError();
+#endif
 error_nomem:
 #ifdef UNICODE
 	if (tempname != NULL) free(tempname);

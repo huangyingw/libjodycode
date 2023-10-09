@@ -6,7 +6,9 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include <unistd.h>
+#ifndef ON_WINDOWS
+ #include <unistd.h>
+#endif
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 
@@ -30,13 +32,17 @@ extern int jc_access(const char *pathname, int mode)
 		return -1;
 	}
 
-#ifdef UNICODE
+#ifdef ON_WINDOWS
+ #ifdef UNICODE
 	if (jc_string_to_wstring(pathname, &widename) != 0) {
 		jc_errno = ENOMEM;
 		return -1;
 	}
 	retval = _waccess(widename, mode);
 	free(widename);
+ #else
+	retval = _access(pathname, mode);
+ #endif
 #else
 	retval = access(pathname, mode);
 #endif

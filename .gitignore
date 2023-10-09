@@ -8,6 +8,7 @@
 *.so*
 *.dll*
 *.exe
+*.obj
 apiver
 cacheinfo
 vercheck

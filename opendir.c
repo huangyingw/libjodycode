@@ -66,7 +66,9 @@ error_fff_after:
 	return NULL;
 error_nomem:
 	if (tempname != NULL) free(tempname);
+#ifdef UNICODE
 	if (widename != NULL) free(widename);
+#endif
 	jc_errno = ENOMEM;
 	return NULL;
 #else

@@ -361,19 +361,16 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 
  extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd);
  extern void jc_slash_convert(char *path);
+ extern void jc_set_output_modes(int out, int err);
 
  /* These are used for Unicode output and string work on Windows only */
  #ifdef UNICODE
-  extern void jc_set_output_modes(int out, int err);
   extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring);
   extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv);
- #else
-  #define jc_slash_convert(a)
-  #define jc_set_output_modes(a)
  #endif /* UNICODE */
 #else
  #define jc_slash_convert(a)
- #define jc_set_output_modes(a)
+ #define jc_set_output_modes(a,b)
 #endif
 
 #endif /* LIBJODYCODE_H */
