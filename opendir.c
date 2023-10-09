@@ -4,7 +4,9 @@
  * Released under The MIT License
  */
 
-#include <dirent.h>
+#ifndef ON_WINDOWS
+ #include <dirent.h>
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include "likely_unlikely.h"
@@ -37,10 +39,10 @@ extern JC_DIR *jc_opendir(const char * restrict path)
 	if (unlikely(tempname == NULL)) goto error_nomem;
 
 	/* Windows requires \* at the end of directory names */
-	strncpy(tempname, path, JC_PATHBUF_SIZE - 1);
+	strncpy_s(tempname, JC_PATHBUF_SIZE, path, JC_PATHBUF_SIZE - 1);
 	p = tempname + strlen(tempname) - 1;
 	if (*p == '/' || *p == '\\') *p = '\0';
-	strncat(tempname, "\\*", JC_PATHBUF_SIZE - 1);
+	strncat_s(tempname, JC_PATHBUF_SIZE, "\\*", JC_PATHBUF_SIZE - 1);
 
  #ifdef UNICODE
 	widename = (wchar_t *)malloc(JC_PATHBUF_SIZE + 4);

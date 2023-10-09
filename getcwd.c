@@ -5,8 +5,9 @@
  */
 
 #include <errno.h>
-//#include <stdio.h>
-#include <unistd.h>
+#ifndef ON_WINDOWS
+ #include <unistd.h>
+#endif
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 

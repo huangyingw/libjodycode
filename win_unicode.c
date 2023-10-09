@@ -36,7 +36,7 @@ extern void jc_slash_convert(char *path)
 extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
 {
 	if (unlikely(wstring == NULL)) return JC_ENULL;
-	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
+	*wstring = (JC_WCHAR_T *)malloc(JC_PATHBUF_SIZE + 4);
 	if (unlikely(*wstring == NULL)) return JC_EALLOC;
 	if (unlikely(!M2W(string, *wstring))) {
 		free(*wstring);
@@ -62,7 +62,7 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 
 		argv[counter] = (char *)malloc((size_t)len + 1);
 		if (unlikely(!argv[counter])) return JC_EALLOC;
-		strncpy(argv[counter], temp, (size_t)len + 1);
+		strncpy_s(argv[counter], (size_t)len + 1, temp, (size_t)len + 1);
 	}
 	return 0;
 }
@@ -76,6 +76,9 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 #ifdef UNICODE
 	char *tempname;
 #endif
+	size_t len;
+
+	(void)hFind;
 
 	if (dirp == NULL) {
 		jc_errno = EFAULT;
@@ -87,14 +90,16 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 	tempname = (char *)malloc(JC_PATHBUF_SIZE + 4);
 	if (unlikely(tempname == NULL)) goto error_nomem;
 	if (unlikely(!W2M(ffd.cFileName, tempname))) goto error_name;
-	*dirp = (JC_DIR *)calloc(1, sizeof(JC_DIR) + strlen(tempname) + 1);
+	len = strlen(tempname) + 1;
+	*dirp = (JC_DIR *)calloc(1, sizeof(JC_DIR) + len);
 	if (unlikely(*dirp == NULL)) goto error_nomem;
-	strcpy((*dirp)->dirent.d_name, tempname);
+	strcpy_s((*dirp)->dirent.d_name, len, tempname);
 	free(tempname);
  #else
-	*dirp = (JC_DIR *)calloc(1, sizeof(JC_DIR) + strlen(ffd.cFileName) + 1);
+	len = strlen(ffd.cFileName) + 1;
+	*dirp = (JC_DIR *)calloc(1, sizeof(JC_DIR) + len);
 	if (unlikely(*dirp == NULL)) goto error_nomem;
-	strcpy((*dirp)->dirent.d_name, ffd.cFileName);
+	strcpy_s((*dirp)->dirent.d_name, len, ffd.cFileName);
  #endif
 	// TODO: populate JC_DIR stuff
 	return 0;

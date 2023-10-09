@@ -86,8 +86,13 @@ extern int jc_make_relative_link_name(const char * const src,
   if (*src != '/' || *dest != '/') {
     if (!jc_getcwd(p1, JC_PATHBUF_SIZE * 2)) return JC_EGETCWD;
     *(p1 + (JC_PATHBUF_SIZE * 2) - 1) = '\0';
+#ifdef ON_WINDOWS
+    strncat_s(p1, JC_PATHBUF_SIZE * 2, "/", JC_PATHBUF_SIZE * 2 - 1);
+    strncpy_s(p2, JC_PATHBUF_SIZE * 2, p1, JC_PATHBUF_SIZE * 2);
+#else
     strncat(p1, "/", JC_PATHBUF_SIZE * 2 - 1);
     strncpy(p2, p1, JC_PATHBUF_SIZE * 2);
+#endif
   }
 
   /* If an absolute path is provided, use it as-is */
@@ -95,8 +100,13 @@ extern int jc_make_relative_link_name(const char * const src,
   if (*dest == '/') *p2 = '\0';
 
   /* Concatenate working directory to relative paths */
+#ifdef ON_WINDOWS
+  strncat_s(p1, JC_PATHBUF_SIZE * 2, src, JC_PATHBUF_SIZE);
+  strncat_s(p2, JC_PATHBUF_SIZE * 2, dest, JC_PATHBUF_SIZE);
+#else
   strncat(p1, src, JC_PATHBUF_SIZE);
   strncat(p2, dest, JC_PATHBUF_SIZE);
+#endif
 
   /* Collapse . and .. path components */
   if (unlikely(jc_collapse_dotdot(p1) != 0)) return JC_ECDOTDOT;

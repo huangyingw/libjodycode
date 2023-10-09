@@ -9,6 +9,7 @@
 *.dll*
 *.exe
 *.obj
+*.lib
 apiver
 cacheinfo
 vercheck

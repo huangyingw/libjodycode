@@ -89,8 +89,8 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 		if (jc_string_to_wstring(str, &wstr) != 0) return JC_EALLOC;
 		fflush(stream);
 		_setmode(_fileno(stream), stream_mode);
-		if (cr == 2) retval = fwprintf(stream, L"%S%C", wstr, 0);
-		else retval = fwprintf(stream, L"%S%S", wstr, cr == 1 ? L"\n" : L"");
+		if (cr == 2) retval = fwprintf(stream, L"%ls%C", wstr, 0);
+		else retval = fwprintf(stream, L"%ls%ls", wstr, cr == 1 ? L"\n" : L"");
 		fflush(stream);
 		_setmode(_fileno(stream), _O_TEXT);
 		free(wstr);
