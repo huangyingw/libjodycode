@@ -203,10 +203,12 @@ typedef struct _JC_DIR_T {
 	struct _JC_DIR_T *next;
 	WIN32_FIND_DATA ffd;
 	HANDLE hFind;
+	int cached;
 	JC_DIRENT dirent;
 } JC_DIR;
 #else
  #define JC_DIR DIR
+ #define JC_DIRENT struct dirent
 #endif /* ON_WINDOWS */
 
 extern int32_t jc_errno;

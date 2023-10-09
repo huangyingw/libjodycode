@@ -104,6 +104,7 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
  #endif
 	(*dirp)->ffd = ffd;
 	(*dirp)->hFind = hFind;
+	(*dirp)->cached = 1;
 	return 0;
 
 #ifdef UNICODE
