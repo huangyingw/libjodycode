@@ -1,4 +1,4 @@
-/* libjodycode: Windows Unicode support helper code
+/* libjodycode: Windows Unicode support utility code
  *
  * Copyright (C) 2014-2023 by Jody Bruchon <jody@jodybruchon.com>
  * Released under The MIT License
@@ -101,7 +101,8 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 	if (unlikely(*dirp == NULL)) goto error_nomem;
 	strcpy_s((*dirp)->dirent.d_name, len, ffd.cFileName);
  #endif
-	// TODO: populate JC_DIR stuff
+	(*dirp)->ffd = ffd;
+	(*dirp)->hFind = hFind;
 	return 0;
 
 #ifdef UNICODE
