@@ -198,6 +198,7 @@ typedef struct _JC_DIRENT_T {
 	uint64_t d_ino;
 	char d_name[];
 } JC_DIRENT;
+
 typedef struct _JC_DIR_T {
 	struct _JC_DIR_T *next;
 	WIN32_FIND_DATA ffd;
@@ -273,6 +274,9 @@ extern int jc_print_error(int errnum);
 #define JC_EDATETIME  11
 #define JC_EWIN32API  12
 
+
+/*** jc_fwprint ***/
+extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
 
 
 /*** jody_hash ***/
@@ -355,14 +359,14 @@ extern const unsigned char jc_api_versiontable[];
 /* Cross-platform help for strings in Unicode mode on Windows
  * On non-Windows platforms a lot of these are just wrappers */
 
-extern int jc_fwprint(FILE * const restrict stream, const char * const restrict str, const int cr);
-
 #ifdef ON_WINDOWS
  #define JC_MODE_NO_CHANGE 0  /* Don't change the output mode */
  #define JC_MODE_TEXT      1  /* Set output mode to _O_TEXT */
  #define JC_MODE_BINARY    2  /* Set output mode to _O_BINARY (UTF-8) */
  #define JC_MODE_UTF16     3  /* Set output mode to _O_U16TEXT (UTF-16) */
  #define JC_MODE_UTF16_TTY 4  /* Set non-_O_TEXT output mode based on if it's a terminal or not */
+
+ extern struct JC_DIR *dirp_head;
 
  extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd);
  extern void jc_slash_convert(char *path);

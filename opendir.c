@@ -23,7 +23,6 @@ extern JC_DIR *jc_opendir(const char * restrict path)
 {
 	JC_DIR *retval;
 #ifdef ON_WINDOWS
-	static struct *dirp_head = NULL;
 	JC_DIR *dirp;
 	char *tempname, *p;
 	WIN32_FIND_DATA ffd;
