@@ -22,20 +22,6 @@
 
 
 #ifdef ON_WINDOWS
-/* Copy a string to a wide string - wstring must be freed by the caller */
-extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
-{
-	if (unlikely(wstring == NULL)) return JC_ENULL;
-	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
-	if (unlikely(*wstring == NULL)) return JC_EALLOC;
-	if (unlikely(!M2W(string, *wstring))) {
-		free(*wstring);
-		return JC_EMBWC;
-	}
-	return 0;
-}
-
-
 /* Set jc_fwprint output modes for stdout/stderr to TEXT, BINARY, or UTF-16
  * 0: no change
  * 1: set to text mode

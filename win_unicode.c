@@ -32,6 +32,20 @@ extern void jc_slash_convert(char *path)
 
 
 #ifdef UNICODE
+/* Copy a string to a wide string - wstring must be freed by the caller */
+extern int jc_string_to_wstring(const char * const restrict string, JC_WCHAR_T **wstring)
+{
+	if (unlikely(wstring == NULL)) return JC_ENULL;
+	*wstring = (JC_WCHAR_T *)malloc(PATH_MAX + 4);
+	if (unlikely(*wstring == NULL)) return JC_EALLOC;
+	if (unlikely(!M2W(string, *wstring))) {
+		free(*wstring);
+		return JC_EMBWC;
+	}
+	return 0;
+}
+
+
 /* Copy Windows wide character arguments to UTF-8 */
 extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 {

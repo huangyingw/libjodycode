@@ -53,8 +53,14 @@ extern "C" {
  #ifndef M2W
   #define M2W(a,b) MultiByteToWideChar(CP_UTF8, 0, a, -1, (LPWSTR)b, WPATH_MAX)
  #endif
+ #ifndef M2W_SIZED
+  #define M2W_SIZED(a,b,c) MultiByteToWideChar(CP_UTF8, 0, a, -1, (LPWSTR)b, c)
+ #endif
  #ifndef W2M
   #define W2M(a,b) WideCharToMultiByte(CP_UTF8, 0, a, -1, (LPSTR)b, WPATH_MAX, NULL, NULL)
+ #endif
+ #ifndef W2M_SIZED
+  #define W2M_SIZED(a,b,c) WideCharToMultiByte(CP_UTF8, 0, a, -1, (LPSTR)b, c, NULL, NULL)
  #endif
  #define jc_GetLastError() (int32_t)GetLastError()
 #else
@@ -200,12 +206,7 @@ typedef struct _JC_DIR_T {
 extern int32_t jc_errno;
 
 extern int     jc_access(const char *pathname, int mode);
-// FIXME: write jc_getcwd and toss this alias
-#ifdef ON_WINDOWS
- #define jc_getcwd(a,b) _getcwd(a,b)
-#else
- #define jc_getcwd(a,b) getcwd(a,b)
-#endif
+extern char   *jc_getcwd(char *pathname, size_t size);
 extern FILE   *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int     jc_link(const char *path1, const char *path2);
 extern JC_DIR *jc_opendir(const char * restrict path);
