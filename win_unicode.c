@@ -71,7 +71,8 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 
 
 #ifdef ON_WINDOWS
-/* Copy WIN32_FIND_FILE data to DIR data for a JC_DIR */
+/* Copy WIN32_FIND_FILE data to DIR data for a JC_DIR
+ * hFind should be NULL if dirp was already initialized by this call */
 extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 {
 #ifdef UNICODE
@@ -79,11 +80,11 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 #endif
 	size_t len;
 
-	(void)hFind;
+	if (dirp == NULL) goto error_null;
 
-	if (dirp == NULL) {
-		jc_errno = EFAULT;
-		return -1;
+	if (hFind == NULL) {
+		if (unlikely((*dirp == NULL) || (*dirp)->ffd == NULL)) goto error_null;
+		ffd = (*dirp)->ffd;
 	}
 
  #ifdef UNICODE
@@ -102,9 +103,14 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 	if (unlikely(*dirp == NULL)) goto error_nomem;
 	strcpy_s((*dirp)->dirent.d_name, len, ffd.cFileName);
  #endif
-	(*dirp)->ffd = ffd;
-	(*dirp)->hFind = hFind;
-	(*dirp)->cached = 1;
+
+	/* First call: init ffd/hFind + mark cached FindFirstFile() dirent */
+	if (hFind != NULL) {
+		(*dirp)->ffd = ffd;
+		(*dirp)->hFind = hFind;
+		(*dirp)->cached = 1;
+	}
+
 	return 0;
 
 #ifdef UNICODE
@@ -116,6 +122,9 @@ error_nomem:
 	if (tempname != NULL) free(tempname);
 #endif
 	jc_errno = ENOMEM;
+	return -1;
+error_null:
+	jc_errno = EFAULT;
 	return -1;
 }
 #endif  /* ON_WINDOWS */

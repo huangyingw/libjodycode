@@ -59,7 +59,7 @@ extern JC_DIR *jc_opendir(const char * restrict path)
  #endif
 	free(tempname);
 	if (unlikely(hFind == INVALID_HANDLE_VALUE)) goto error_fff;
-	if (jc_ffd_to_dirent(&dirp, hFind, ffd) != 0) goto error_fff_after;
+	if (jc_ffd_to_dirent(&dirp, hFind, ffd) != 0) return NULL;
 
 	/* attach dirp to a linked list of them */
 	dirp->next = dirp_head;
@@ -69,7 +69,6 @@ extern JC_DIR *jc_opendir(const char * restrict path)
 
 error_fff:
 	jc_errno = jc_GetLastError();
-error_fff_after:
 	return NULL;
 error_nomem:
 	if (tempname != NULL) free(tempname);

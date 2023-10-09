@@ -21,28 +21,41 @@
 /* Open a directory; handle Windows doing readdir() equivalent too */
 extern JC_DIRENT *jc_readdir(JC_DIR *dirp)
 {
-	JC_DIRENT *retval;
 #ifdef ON_WINDOWS
-	JC_DIR **prev, **cur;
+	int i;
 
 	if (unlikely(dirp == NULL)) goto error_bad_dirp;
 	
-	/* Scan dirp list for a cached dirent */
-	for (prev = NULL, cur = dirp_head; cur != dirp && cur != NULL; prev = cur, cur = cur->next);
-	if (cur != dirp) goto error_bad_dirp;
+	/* Save this for jc_closedir() */
+//	for (prev = NULL, cur = dirp_head; cur != dirp && cur != NULL; prev = cur, cur = cur->next);
+//	if (cur != dirp) goto error_bad_dirp;
 
-	// TODO: return cached value if present
+	if (dirp->cached == 1) {
+		dirp->cached = 0;
+		goto skip_fnf;
+	}
 
-	// TODO: FindNextFile() and return result
+	i = FindNextFile(dirp->hFind, &(dirp->ffd));
+	if (i == 0) goto error_fnf;
+	if (jc_ffd_to_dirent(&dirp, NULL, NULL) != 0) return NULL;
 
-	return retval;
-#else
+skip_fnf:
+	return &(dirp->dirent);
+
+error_bad_dirp:
+	jc_errno = EFAULT;
+	return NULL;
+error_fnf:
+	jc_errno = jc_GetLastError();
+	return NULL;
+
+#else  /* Non-Windows */
+
+	JC_DIRENT *retval;
+
 	errno = 0;
 	retval = readdir(path);
 	if (retval == NULL) jc_errno = errno;
 	return retval;
 #endif /* ON_WINDOWS */
-error_bad_dirp:
-	jc_errno = EFAULT;
-	return NULL;
 }
