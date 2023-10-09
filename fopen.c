@@ -19,6 +19,9 @@
 extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 {
 	FILE *fp;
+#ifdef ON_WINDOWS
+	errno_t retval;
+#endif
 #ifdef UNICODE
 	JC_WCHAR_T *widename;
 #endif
@@ -28,16 +31,21 @@ extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 		return NULL;
 	}
 
-#ifdef UNICODE
+#ifdef ON_WINDOWS
+ #ifdef UNICODE
 	if (jc_string_to_wstring(pathname, &widename) != 0) {
 		jc_errno = ENOMEM;
 		return NULL;
 	}
-	fp = _wfopen(widename, mode);
+	retval = _wfopen_s(&fp, widename, mode);
 	free(widename);
+ #else
+	retval = _fopen_s(&fp, pathname, mode);
+ #endif  /* UNICODE */
+	if (retval != 0) jc_errno = errno;
 #else
 	fp = fopen(pathname, mode);
-#endif
 	if (fp == NULL) jc_errno = errno;
+#endif  /* ON_WINDOWS */
 	return fp;
 }
