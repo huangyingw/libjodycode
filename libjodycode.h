@@ -39,6 +39,11 @@ extern "C" {
  #endif
 #endif
 
+/* Silence a MSVC++ warning */
+#ifdef _MSC_VER
+ #pragma warning(disable : 4200)
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>
