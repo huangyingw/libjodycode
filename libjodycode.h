@@ -48,6 +48,7 @@ extern "C" {
   #define WIN32_LEAN_AND_MAN
  #endif
  #include <windows.h>
+ #include <direct.h>
  /* Unicode conversion on Windows */
  #ifndef M2W
   #define M2W(a,b) MultiByteToWideChar(CP_UTF8, 0, a, -1, (LPWSTR)b, WPATH_MAX)
@@ -102,12 +103,25 @@ struct JC_STAT {
  #define JC_S_ISSPARSE(st_mode) ((st_mode & FILE_ATTRIBUTE_SPARSE) ? 1 : 0)
  #define JC_S_ISTEMP(st_mode) ((st_mode & FILE_ATTRIBUTE_TEMPORARY) ? 1 : 0)
  #define JC_S_ISREG(st_mode) ((st_mode & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ? 0 : 1)
+ #define JC_S_ISLNK(st_mode) ((st_mode & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0)
 
  extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp);
  extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp);
 #else
  #include <sys/stat.h>
  #define JC_STAT stat
+ #define JC_S_ISARCHIVE(st_mode) 0
+ #define JC_S_ISRO(st_mode) 0
+ #define JC_S_ISHIDDEN(st_mode) 0
+ #define JC_S_ISSYSTEM(st_mode) 0
+ #define JC_S_ISCRYPT(st_mode) 0
+ #define JC_S_ISDIR(st_mode) S_ISDIR(st_mode)
+ #define JC_S_ISCOMPR(st_mode) 0
+ #define JC_S_ISREPARSE(st_mode) 0
+ #define JC_S_ISSPARSE(st_mode) 0
+ #define JC_S_ISTEMP(st_mode) 0
+ #define JC_S_ISREG(st_mode) S_ISREG(st_mode)
+ #define JC_S_ISLNK(st_mode) S_ISLNK(st_mode)
 #endif /* ON_WINDOWS */
 
 
@@ -186,6 +200,12 @@ typedef struct _JC_DIR_T {
 extern int32_t jc_errno;
 
 extern int     jc_access(const char *pathname, int mode);
+// FIXME: write jc_getcwd and toss this alias
+#ifdef ON_WINDOWS
+ #define jc_getcwd(a,b) _getcwd(a,b)
+#else
+ #define jc_getcwd(a,b) getcwd(a,b)
+#endif
 extern FILE   *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int     jc_link(const char *path1, const char *path2);
 extern JC_DIR *jc_opendir(const char * restrict path);

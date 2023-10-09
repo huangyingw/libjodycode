@@ -84,7 +84,7 @@ extern int jc_make_relative_link_name(const char * const src,
 
   /* Get working directory path and prefix to pathnames if needed */
   if (*src != '/' || *dest != '/') {
-    if (!getcwd(p1, JC_PATHBUF_SIZE * 2)) return JC_EGETCWD;
+    if (!jc_getcwd(p1, JC_PATHBUF_SIZE * 2)) return JC_EGETCWD;
     *(p1 + (JC_PATHBUF_SIZE * 2) - 1) = '\0';
     strncat(p1, "/", JC_PATHBUF_SIZE * 2 - 1);
     strncpy(p2, p1, JC_PATHBUF_SIZE * 2);
