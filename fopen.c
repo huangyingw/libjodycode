@@ -40,7 +40,7 @@ extern FILE *jc_fopen(const char *pathname, const JC_WCHAR_T *mode)
 	retval = _wfopen_s(&fp, widename, mode);
 	free(widename);
  #else
-	retval = _fopen_s(&fp, pathname, mode);
+	retval = fopen_s(&fp, pathname, mode);
  #endif  /* UNICODE */
 	if (retval != 0) jc_errno = errno;
 #else
