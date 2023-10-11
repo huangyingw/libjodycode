@@ -16,7 +16,7 @@
  #define WIN32_LEAN_AND_MEAN
  #include <windows.h>
  #include <io.h>
- struct JC_DIR *dirp_head = NULL;
+ JC_DIR *dirp_head = NULL;
 #endif  /* ON_WINDOWS */
 
 #ifdef ON_WINDOWS
@@ -73,7 +73,7 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 #ifdef ON_WINDOWS
 /* Copy WIN32_FIND_FILE data to DIR data for a JC_DIR
  * hFind should be NULL if dirp was already initialized by this call */
-extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
+extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA *ffd)
 {
 #ifdef UNICODE
 	char *tempname;
@@ -83,30 +83,30 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd)
 	if (dirp == NULL) goto error_null;
 
 	if (hFind == NULL) {
-		if (unlikely((*dirp == NULL) || (*dirp)->ffd == NULL)) goto error_null;
-		ffd = (*dirp)->ffd;
+		if (unlikely(*dirp == NULL)) goto error_null;
+		ffd = &((*dirp)->ffd);
 	}
 
  #ifdef UNICODE
 	/* Must count bytes after conversion to allocate correct size */
 	tempname = (char *)malloc(JC_PATHBUF_SIZE + 4);
 	if (unlikely(tempname == NULL)) goto error_nomem;
-	if (unlikely(!W2M(ffd.cFileName, tempname))) goto error_name;
+	if (unlikely(!W2M(ffd->cFileName, tempname))) goto error_name;
 	len = strlen(tempname) + 1;
 	*dirp = (JC_DIR *)calloc(1, sizeof(JC_DIR) + len);
 	if (unlikely(*dirp == NULL)) goto error_nomem;
 	strcpy_s((*dirp)->dirent.d_name, len, tempname);
 	free(tempname);
  #else
-	len = strlen(ffd.cFileName) + 1;
+	len = strlen(ffd->cFileName) + 1;
 	*dirp = (JC_DIR *)calloc(1, sizeof(JC_DIR) + len);
 	if (unlikely(*dirp == NULL)) goto error_nomem;
-	strcpy_s((*dirp)->dirent.d_name, len, ffd.cFileName);
+	strcpy_s((*dirp)->dirent.d_name, len, ffd->cFileName);
  #endif
 
 	/* First call: init ffd/hFind + mark cached FindFirstFile() dirent */
 	if (hFind != NULL) {
-		(*dirp)->ffd = ffd;
+		memcpy(&((*dirp)->ffd), ffd, sizeof(WIN32_FIND_DATA));
 		(*dirp)->hFind = hFind;
 		(*dirp)->cached = 1;
 	}

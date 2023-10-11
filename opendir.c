@@ -21,7 +21,6 @@
 /* Open a directory; handle Windows doing readdir() equivalent too */
 extern JC_DIR *jc_opendir(const char * restrict path)
 {
-	JC_DIR *retval;
 #ifdef ON_WINDOWS
 	JC_DIR *dirp;
 	char *tempname, *p;
@@ -59,7 +58,7 @@ extern JC_DIR *jc_opendir(const char * restrict path)
  #endif
 	free(tempname);
 	if (unlikely(hFind == INVALID_HANDLE_VALUE)) goto error_fff;
-	if (jc_ffd_to_dirent(&dirp, hFind, ffd) != 0) return NULL;
+	if (jc_ffd_to_dirent(&dirp, hFind, &ffd) != 0) return NULL;
 
 	/* attach dirp to a linked list of them */
 	dirp->next = dirp_head;
@@ -77,7 +76,11 @@ error_nomem:
 #endif
 	jc_errno = ENOMEM;
 	return NULL;
+
 #else
+
+	JC_DIR *retval;
+
 	retval = opendir(path);
 	if (retval == NULL) jc_errno = errno;
 	return retval;

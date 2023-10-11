@@ -201,10 +201,10 @@ typedef struct _JC_DIRENT_T {
 
 typedef struct _JC_DIR_T {
 	struct _JC_DIR_T *next;
-	WIN32_FIND_DATA ffd;
-	HANDLE hFind;
 	int cached;
 	JC_DIRENT dirent;
+	HANDLE hFind;
+	WIN32_FIND_DATA ffd;
 } JC_DIR;
 #else
  #define JC_DIR DIR
@@ -369,9 +369,9 @@ extern const unsigned char jc_api_versiontable[];
  #define JC_MODE_UTF16     3  /* Set output mode to _O_U16TEXT (UTF-16) */
  #define JC_MODE_UTF16_TTY 4  /* Set non-_O_TEXT output mode based on if it's a terminal or not */
 
- extern struct JC_DIR *dirp_head;
+ extern JC_DIR *dirp_head;
 
- extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA ffd);
+ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA *ffd);
  extern void jc_slash_convert(char *path);
  extern void jc_set_output_modes(int out, int err);
 
