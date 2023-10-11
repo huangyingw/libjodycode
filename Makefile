@@ -116,10 +116,12 @@ LDFLAGS += $(LINK_OPTIONS)
 # to support features not supplied by their vendor. Eg: GNU getopt()
 #ADDITIONAL_OBJECTS += getopt.o
 
-OBJS += access.o alarm.o cacheinfo.o error.o fopen.o getcwd.o
-OBJS += jc_block_hash.o jc_fwprint.o jc_string.o jody_hash.o link.o
-OBJS += jc_numstrcmp.o jc_time.o oom.o opendir.o paths.o remove.o
-OBJS += rename.o size_suffix.o stat.o
+OBJS += access.o alarm.o cacheinfo.o closedir.o
+OBJS += error.o fopen.o getcwd.o
+OBJS += jc_block_hash.o jc_fwprint.o
+OBJS += jc_numstrcmp.o jc_string.o jc_time.o
+OBJS += jody_hash.o link.o oom.o opendir.o paths.o
+OBJS += readdir.o remove.o rename.o size_suffix.o stat.o
 OBJS += version.o win_unicode.o
 OBJS += $(ADDITIONAL_OBJECTS)
 

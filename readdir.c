@@ -26,10 +26,6 @@ extern JC_DIRENT *jc_readdir(JC_DIR *dirp)
 
 	if (unlikely(dirp == NULL)) goto error_bad_dirp;
 	
-	/* Save this for jc_closedir() */
-//	for (prev = NULL, cur = dirp_head; cur != dirp && cur != NULL; prev = cur, cur = cur->next);
-//	if (cur != dirp) goto error_bad_dirp;
-
 	if (dirp->cached == 1) {
 		dirp->cached = 0;
 		goto skip_fnf;

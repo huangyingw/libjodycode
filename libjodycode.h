@@ -214,6 +214,7 @@ typedef struct _JC_DIR_T {
 extern int32_t jc_errno;
 
 extern int        jc_access(const char *pathname, int mode);
+extern int        jc_closedir(JC_DIR *dirp);
 extern char      *jc_getcwd(char *pathname, size_t size);
 extern FILE      *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int        jc_link(const char *path1, const char *path2);

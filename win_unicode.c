@@ -72,7 +72,8 @@ extern int jc_widearg_to_argv(int argc, JC_WCHAR_T **wargv, char **argv)
 
 #ifdef ON_WINDOWS
 /* Copy WIN32_FIND_FILE data to DIR data for a JC_DIR
- * hFind should be NULL if dirp was already initialized by this call */
+ * The first call will allocate a JC_DIR and copy into it
+ * Set hFind/ffd to NULL for subsequent calls on the same dirp */
 extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA *ffd)
 {
 #ifdef UNICODE
