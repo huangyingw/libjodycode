@@ -202,9 +202,9 @@ typedef struct _JC_DIRENT_T {
 typedef struct _JC_DIR_T {
 	struct _JC_DIR_T *next;
 	int cached;
-	JC_DIRENT dirent;
 	HANDLE hFind;
 	WIN32_FIND_DATA ffd;
+	JC_DIRENT dirent;
 } JC_DIR;
 #else
  #define JC_DIR DIR
