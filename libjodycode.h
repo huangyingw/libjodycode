@@ -196,7 +196,7 @@ struct JC_STAT {
 #ifdef ON_WINDOWS
 typedef struct _JC_DIRENT_T {
 	uint64_t d_ino;
-	char d_name[];
+	char d_name[1];
 } JC_DIRENT;
 
 typedef struct _JC_DIR_T {
