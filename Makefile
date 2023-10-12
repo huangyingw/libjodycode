@@ -214,7 +214,7 @@ stripped: sharedlib staticlib
 	$(STRIP_DEBUG) libjodycode$(LIB_SUFFIX)
 
 objsclean:
-	$(RM) $(OBJS) $(SIMD_OBJS) vercheck.o
+	$(RM) $(OBJS) $(SIMD_OBJS) vercheck.o *.obj
 
 clean: objsclean
 	$(RM) $(PROGRAM_NAME)$(SO_SUFFIX) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION)
