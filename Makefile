@@ -15,7 +15,8 @@ RMDIR   = rmdir -p
 MKDIR   = mkdir -p
 INSTALL_PROGRAM = $(INSTALL) -m 0755
 INSTALL_DATA    = $(INSTALL) -m 0644
-SO_SUFFIX = so
+SO_SUFFIX = .so
+LIB_SUFFIX = .a
 API_VERSION = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"//;s/\..*//')
 
 # Make Configuration
@@ -25,18 +26,29 @@ COMPILER_OPTIONS += -std=gnu11 -D_FILE_OFFSET_BITS=64 -fstrict-aliasing -pipe -f
 
 UNAME_S       = $(shell uname -s)
 UNAME_M       = $(shell uname -m)
-VERSION       = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"//;s/".*//')
-VERSION_MAJOR = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"//;s/\..*//')
+VERSION       = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"/./;s/".*//')
+VERSION_MAJOR = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"/./;s/\..*//')
 CROSS_DETECT  = $(shell true | $(CC) -dM -E - | grep -m 1 __x86_64 || echo "cross")
 
+# Are we running on a Windows OS?
+ifeq ($(OS), Windows_NT)
+ ifndef NO_WINDOWS
+  ON_WINDOWS=1
+  SO_SUFFIX=.dll
+  LIB_SUFFIX=.lib
+  VERSION=
+  VERSION_MAJOR=
+ endif
+endif
+
 ifeq ($(UNAME_S), Darwin)
- LINK_OPTIONS += -Wl,-install_name,$(PROGRAM_NAME).$(SO_SUFFIX).$(API_VERSION)
+ LINK_OPTIONS += -Wl,-install_name,$(PROGRAM_NAME)$(SO_SUFFIX).$(API_VERSION)
  # Don't use unsupported compiler options on gcc 3/4 (Mac OS X 10.5.8 Xcode)
  GCCVERSION = $(shell expr `LC_ALL=C gcc -v 2>&1 | grep '[cn][cg] version' | sed 's/[^0-9]*//;s/[ .].*//'` \>= 5)
  STRIP_UNNEEDED = strip -S
  STRIP_DEBUG = strip -S
 else
- LINK_OPTIONS += -Wl,-soname,$(PROGRAM_NAME).$(SO_SUFFIX).$(API_VERSION)
+ LINK_OPTIONS += -Wl,-soname,$(PROGRAM_NAME)$(SO_SUFFIX).$(API_VERSION)
  GCCVERSION = 1
  STRIP_UNNEEDED = strip --strip-unneeded
  STRIP_DEBUG = strip --strip-debug
@@ -46,66 +58,58 @@ ifeq ($(GCCVERSION), 1)
  COMPILER_OPTIONS += -Wextra -Wstrict-overflow=5 -Winit-self
 endif
 
-# Are we running on a Windows OS?
-ifeq ($(OS), Windows_NT)
-	ifndef NO_WINDOWS
-		ON_WINDOWS=1
-		SO_SUFFIX=dll
-	endif
-endif
-
 # Debugging code inclusion
 ifdef LOUD
-DEBUG=1
-CFLAGS += -DLOUD_DEBUG
+ DEBUG=1
+ CFLAGS += -DLOUD_DEBUG
 endif
 ifdef DEBUG
-CFLAGS += -DDEBUG
+ CFLAGS += -DDEBUG
 else
-CFLAGS += -DNDEBUG
+ CFLAGS += -DNDEBUG
 endif
 ifdef HARDEN
-CFLAGS += -Wformat -Wformat-security -D_FORTIFY_SOURCE=2 -fstack-protector-strong -Wl,-z,relro -Wl,-z,now
+ CFLAGS += -Wformat -Wformat-security -D_FORTIFY_SOURCE=2 -fstack-protector-strong -Wl,-z,relro -Wl,-z,now
 endif
 
 # MinGW needs this for printf() conversions to work
 ifdef ON_WINDOWS
-	ifndef NO_UNICODE
-		UNICODE=1
-		COMPILER_OPTIONS += -municode
-		PROGRAM_SUFFIX=.exe
-	endif
-	ifeq ($(UNAME_S), MINGW32_NT-5.1)
-		OBJS += winres_xp.o
-	else
-		OBJS += winres.o
-	endif
-	COMPILER_OPTIONS += -D__USE_MINGW_ANSI_STDIO=1 -DON_WINDOWS=1
+ ifndef NO_UNICODE
+  UNICODE=1
+  COMPILER_OPTIONS += -municode
+  PROGRAM_SUFFIX=.exe
+ endif
+ ifeq ($(UNAME_S), MINGW32_NT-5.1)
+  OBJS += winres_xp.o
+ else
+  OBJS += winres.o
+ endif
+ COMPILER_OPTIONS += -D__USE_MINGW_ANSI_STDIO=1 -DON_WINDOWS=1
 endif
 
 # Do not build SIMD code if not on x86_64
 ifneq ($(UNAME_M), x86_64)
-NO_SIMD=1
+ NO_SIMD=1
 endif
 ifeq ($(CROSS_DETECT), cross)
-NO_SIMD=1
+ NO_SIMD=1
 endif
 
 # SIMD SSE2/AVX2 jody_hash code
 ifdef NO_SIMD
-COMPILER_OPTIONS += -DNO_SIMD -DNO_SSE2 -DNO_AVX2
+ COMPILER_OPTIONS += -DNO_SIMD -DNO_SSE2 -DNO_AVX2
 else
-SIMD_OBJS += jody_hash_simd.o
-ifdef NO_SSE2
-COMPILER_OPTIONS += -DNO_SSE2
-else
-SIMD_OBJS += jody_hash_sse2.o
-endif
-ifdef NO_AVX2
-COMPILER_OPTIONS += -DNO_AVX2
-else
-SIMD_OBJS += jody_hash_avx2.o
-endif
+ SIMD_OBJS += jody_hash_simd.o
+ ifdef NO_SSE2
+  COMPILER_OPTIONS += -DNO_SSE2
+ else
+  SIMD_OBJS += jody_hash_sse2.o
+ endif
+ ifdef NO_AVX2
+  COMPILER_OPTIONS += -DNO_AVX2
+ else
+  SIMD_OBJS += jody_hash_avx2.o
+ endif
 endif
 
 
@@ -129,12 +133,12 @@ all: sharedlib staticlib
 	-@test "$(CROSS_DETECT)" = "cross" && echo "NOTICE: SIMD disabled: !x86_64 or a cross-compiler detected (CC = $(CC))" || true
 
 sharedlib: $(OBJS) $(SIMD_OBJS)
-	$(CC) -shared -o $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION) $(OBJS) $(SIMD_OBJS) $(LDFLAGS) $(CFLAGS) $(CFLAGS_EXTRA)
-	$(LN)            $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION) $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION_MAJOR)
-	$(LN)            $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION_MAJOR) $(PROGRAM_NAME).$(SO_SUFFIX)
+	$(CC) -shared -o $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION) $(OBJS) $(SIMD_OBJS) $(LDFLAGS) $(CFLAGS) $(CFLAGS_EXTRA)
+	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR)
+	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR) $(PROGRAM_NAME)$(SO_SUFFIX)
 
 staticlib: $(OBJS) $(SIMD_OBJS)
-	$(AR) rcs libjodycode.a $(OBJS) $(SIMD_OBJS)
+	$(AR) rcs libjodycode$(LIB_SUFFIX) $(OBJS) $(SIMD_OBJS)
 
 jody_hash_simd.o:
 	$(CC) $(CFLAGS) $(COMPILER_OPTIONS) $(WIN_CFLAGS) $(CFLAGS_EXTRA) $(CPPFLAGS) -mavx2 -c -o jody_hash_simd.o jody_hash_simd.c
@@ -178,10 +182,10 @@ installdirs:
 	test -e $(DESTDIR)$(MAN7_DIR) || $(MKDIR) $(DESTDIR)$(MAN7_DIR)
 
 installfiles:
-	$(INSTALL_PROGRAM) $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION)            $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION)
-	$(LN)           $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION_MAJOR)
-	$(LN)           $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION_MAJOR) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).$(SO_SUFFIX)
-	$(INSTALL_DATA) $(PROGRAM_NAME).a  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).a
+	$(INSTALL_PROGRAM) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION)            $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).$(SO_SUFFIX)$(VERSION)
+	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR)
+	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)
+	$(INSTALL_DATA) $(PROGRAM_NAME)$(LIB_SUFFIX  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(LIB_SUFFIX)
 	$(INSTALL_DATA) $(PROGRAM_NAME).h  $(DESTDIR)$(INC_DIR)/$(PROGRAM_NAME).h
 	$(INSTALL_DATA) $(PROGRAM_NAME).7  $(DESTDIR)$(MAN7_DIR)/$(PROGRAM_NAME).7
 
@@ -193,10 +197,10 @@ uninstalldirs:
 	-test -e $(DESTDIR)$(MAN7_DIR) && $(RMDIR) $(DESTDIR)$(MAN7_DIR)
 
 uninstallfiles:
-	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION)
-	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION_MAJOR)
-	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).$(SO_SUFFIX)
-	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME).a
+	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION)
+	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR)
+	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)
+	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(LIB_SUFFIX)
 	$(RM)  $(DESTDIR)$(INC_DIR)/$(PROGRAM_NAME).h
 	$(RM)  $(DESTDIR)$(MAN7_DIR)/$(PROGRAM_NAME).7
 
@@ -206,16 +210,16 @@ test:
 	./test.sh
 
 stripped: sharedlib staticlib
-	$(STRIP_UNNEEDED) libjodycode.$(SO_SUFFIX)
-	$(STRIP_DEBUG) libjodycode.a
+	$(STRIP_UNNEEDED) libjodycode$(SO_SUFFIX)
+	$(STRIP_DEBUG) libjodycode$(LIB_SUFFIX)
 
 objsclean:
 	$(RM) $(OBJS) $(SIMD_OBJS) vercheck.o
 
 clean: objsclean
-	$(RM) $(PROGRAM_NAME).$(SO_SUFFIX) $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION_MAJOR) $(PROGRAM_NAME).$(SO_SUFFIX).$(VERSION)
-	$(RM) apiver cacheinfo vercheck
-	$(RM) *.a *~ helper_code/*~ libjodycode.so.* libjodycode.dll.* .*.un~ *.gcno *.gcda *.gcov
+	$(RM) $(PROGRAM_NAME)$(SO_SUFFIX) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION)
+	$(RM) $(PROGRAM_NAME)$(LIB_SUFFIX) apiver cacheinfo vercheck
+	$(RM) *~ helper_code/*~ libjodycode.so.* libjodycode.dll.* .*.un~ *.gcno *.gcda *.gcov
 
 distclean: objsclean clean
 	$(RM) *.pkg.tar.*
