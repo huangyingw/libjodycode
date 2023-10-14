@@ -50,7 +50,7 @@ error_fnf:
 	JC_DIRENT *retval;
 
 	errno = 0;
-	retval = readdir(path);
+	retval = readdir(dirp);
 	if (retval == NULL) jc_errno = errno;
 	return retval;
 #endif /* ON_WINDOWS */

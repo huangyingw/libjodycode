@@ -9,6 +9,7 @@
 #endif
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 
@@ -18,6 +19,7 @@
 #endif
 
 
+#ifdef ON_WINDOWS
 /* De-allocate a directory struct and remove from the list */
 static void jc_destroy_dirp(JC_DIR *dirp)
 {
@@ -36,6 +38,7 @@ static void jc_destroy_dirp(JC_DIR *dirp)
 	free(dirp);
 	return;
 }
+#endif /* ON_WINDOWS */
 
 
 /* Close a directory */
