@@ -17,7 +17,6 @@ INSTALL_PROGRAM = $(INSTALL) -m 0755
 INSTALL_DATA    = $(INSTALL) -m 0644
 SO_SUFFIX = .so
 LIB_SUFFIX = .a
-API_VERSION = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"//;s/\..*//')
 
 # Make Configuration
 COMPILER_OPTIONS = -Wall -Wwrite-strings -Wcast-align -Wstrict-aliasing -Wstrict-prototypes -Wpointer-arith -Wundef
@@ -26,8 +25,10 @@ COMPILER_OPTIONS += -std=gnu11 -D_FILE_OFFSET_BITS=64 -fstrict-aliasing -pipe -f
 
 UNAME_S       = $(shell uname -s)
 UNAME_M       = $(shell uname -m)
-VERSION       = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"/./;s/".*//')
-VERSION_MAJOR = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"/./;s/\..*//')
+VERSION       = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"//;s/".*//')
+VERSION_MAJOR = $(shell grep -m 1 '^.define LIBJODYCODE_VER ' libjodycode.h | sed 's/[^"]*"//;s/\..*//')
+SO_VER_FULL   =$(SO_SUFFIX).$(VERSION)
+SO_VER_MAJOR  =$(SO_SUFFIX).$(VERSION_MAJOR)
 CROSS_DETECT  = $(shell true | $(CC) -dM -E - | grep -m 1 __x86_64 || echo "cross")
 
 # Are we running on a Windows OS?
@@ -36,22 +37,22 @@ ifeq ($(OS), Windows_NT)
   ON_WINDOWS=1
   SO_SUFFIX=.dll
   LIB_SUFFIX=.lib
-  VERSION=
-  VERSION_MAJOR=
+  SO_VER_FULL=$(SO_SUFFIX)
+  SO_VER_MAJOR=$(SO_SUFFIX)
  endif
 endif
 
 ifeq ($(UNAME_S), Darwin)
- ON_MACOS=1
- LINK_OPTIONS += -Wl,-install_name,$(PROGRAM_NAME).$(API_VERSION)$(SO_SUFFIX)
+ SO_SUFFIX    = .dylib
+ SO_VER_FULL  = .$(VERSION)$(SO_SUFFIX)
+ SO_VER_MAJOR = .$(VERSION_MAJOR)$(SO_SUFFIX)
+ LINK_OPTIONS += -Wl,-install_name,$(PROGRAM_NAME)$(SO_VER_MAJOR)
  # Don't use unsupported compiler options on gcc 3/4 (Mac OS X 10.5.8 Xcode)
  GCCVERSION = $(shell expr `LC_ALL=C gcc -v 2>&1 | grep '[cn][cg] version' | sed 's/[^0-9]*//;s/[ .].*//'` \>= 5)
  STRIP_UNNEEDED = strip -S
  STRIP_DEBUG = strip -S
- SO_SUFFIX = .dylib
 else
- ON_LINUX=1
- LINK_OPTIONS += -Wl,-soname,$(PROGRAM_NAME)$(SO_SUFFIX).$(API_VERSION)
+ LINK_OPTIONS += -Wl,-soname,$(PROGRAM_NAME)$(SO_VER_MAJOR)
  GCCVERSION = 1
  STRIP_UNNEEDED = strip --strip-unneeded
  STRIP_DEBUG = strip --strip-debug
@@ -136,12 +137,9 @@ all: sharedlib staticlib
 	-@test "$(CROSS_DETECT)" = "cross" && echo "NOTICE: SIMD disabled: !x86_64 or a cross-compiler detected (CC = $(CC))" || true
 
 sharedlib: $(OBJS) $(SIMD_OBJS)
-	-test "$(ON_MACOS)" != "1" && $(CC) -shared -o $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION) $(OBJS) $(SIMD_OBJS) $(LDFLAGS) $(CFLAGS) $(CFLAGS_EXTRA)
-	-test "$(ON_MACOS)" == "1" && $(CC) -shared -o $(PROGRAM_NAME)$(VERSION)$(SO_SUFFIX) $(OBJS) $(SIMD_OBJS) $(LDFLAGS) $(CFLAGS) $(CFLAGS_EXTRA)
-	-test "$(ON_LINUX)" == "1" && $(LN) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR)
-	-test "$(ON_LINUX)" == "1" && $(LN) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR) $(PROGRAM_NAME)$(SO_SUFFIX)
-	-test "$(ON_MACOS)" == "1" && $(LN) $(PROGRAM_NAME)$(VERSION)$(SO_SUFFIX) $(PROGRAM_NAME)$(VERSION_MAJOR)$(SO_SUFFIX)
-	-test "$(ON_MACOS)" == "1" && $(LN) $(PROGRAM_NAME)$(VERSION_MAJOR)$(SO_SUFFIX) $(PROGRAM_NAME)$(SO_SUFFIX)
+	$(CC) -shared -o $(PROGRAM_NAME)$(SO_VER_FULL) $(OBJS) $(SIMD_OBJS) $(LDFLAGS) $(CFLAGS) $(CFLAGS_EXTRA)
+	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_VER_FULL) $(PROGRAM_NAME)$(SO_VER_MAJOR)
+	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_VER_MAJOR) $(PROGRAM_NAME)$(SO_SUFFIX)
 
 staticlib: $(OBJS) $(SIMD_OBJS)
 	$(AR) rcs libjodycode$(LIB_SUFFIX) $(OBJS) $(SIMD_OBJS)
@@ -188,13 +186,10 @@ installdirs:
 	test -e $(DESTDIR)$(MAN7_DIR) || $(MKDIR) $(DESTDIR)$(MAN7_DIR)
 
 installfiles:
-	-test "$(ON_MACOS)" != "1" && $(INSTALL_PROGRAM) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION)
-	-test "$(ON_MACOS)" == "1" && $(INSTALL_PROGRAM) $(PROGRAM_NAME)$(VERSION)$(SO_SUFFIX) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(VERSION)$(SO_SUFFIX)
-	-test "$(ON_LINUX)" == "1" && $(LN) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR)
-	-test "$(ON_LINUX)" == "1" && $(LN) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)
-	-test "$(ON_MACOS)" == "1" && $(LN) $(PROGRAM_NAME)$(VERSION)$(SO_SUFFIX) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(VERSION_MAJOR)$(SO_SUFFIX)
-	-test "$(ON_MACOS)" == "1" && $(LN) $(PROGRAM_NAME)$(VERSION_MAJOR)$(SO_SUFFIX) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)
-	$(INSTALL_DATA) $(PROGRAM_NAME)$(LIB_SUFFIX)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(LIB_SUFFIX)
+	$(INSTALL_PROGRAM) $(PROGRAM_NAME)$(SO_VER_FULL) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_VER_FULL)
+	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_VER_FULL) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_VER_MAJOR)
+	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_VER_MAJOR) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)
+	$(INSTALL_DATA) $(PROGRAM_NAME)$(LIB_SUFFIX  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(LIB_SUFFIX)
 	$(INSTALL_DATA) $(PROGRAM_NAME).h  $(DESTDIR)$(INC_DIR)/$(PROGRAM_NAME).h
 	$(INSTALL_DATA) $(PROGRAM_NAME).7  $(DESTDIR)$(MAN7_DIR)/$(PROGRAM_NAME).7
 
@@ -206,10 +201,8 @@ uninstalldirs:
 	-test -e $(DESTDIR)$(MAN7_DIR) && $(RMDIR) $(DESTDIR)$(MAN7_DIR)
 
 uninstallfiles:
-	-test "$(ON_MACOS)" != "1" && $(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION)
-	-test "$(ON_MACOS)" != "1" && $(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR)
-	-test "$(ON_MACOS)" == "1" && $(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(VERSION)$(SO_SUFFIX)
-	-test "$(ON_MACOS)" == "1" && $(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(VERSION_MAJOR)$(SO_SUFFIX)
+	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_VER_FULL)
+	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_VER_MAJOR)
 	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)
 	$(RM)  $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(LIB_SUFFIX)
 	$(RM)  $(DESTDIR)$(INC_DIR)/$(PROGRAM_NAME).h
@@ -228,8 +221,7 @@ objsclean:
 	$(RM) $(OBJS) $(SIMD_OBJS) vercheck.o *.obj
 
 clean: objsclean
-	-test "$(ON_MACOS)" != "1" && $(RM) $(PROGRAM_NAME)$(SO_SUFFIX) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION_MAJOR) $(PROGRAM_NAME)$(SO_SUFFIX)$(VERSION)
-	-test "$(ON_MACOS)" == "1" && $(RM) $(PROGRAM_NAME)$(SO_SUFFIX) $(PROGRAM_NAME)$(VERSION_MAJOR)$(SO_SUFFIX) $(PROGRAM_NAME)$(VERSION)$(SO_SUFFIX)
+	$(RM) $(PROGRAM_NAME)$(SO_SUFFIX) $(PROGRAM_NAME)$(SO_VER_MAJOR) $(PROGRAM_NAME)$(SO_VER_FULL)
 	$(RM) $(PROGRAM_NAME)$(LIB_SUFFIX) apiver cacheinfo vercheck
 	$(RM) *~ helper_code/*~ libjodycode.so.* libjodycode.dll.* .*.un~ *.gcno *.gcda *.gcov
 
