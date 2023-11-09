@@ -88,7 +88,8 @@ ifdef ON_WINDOWS
  else
   OBJS += winres.o
  endif
- COMPILER_OPTIONS += -D__USE_MINGW_ANSI_STDIO=1 -DON_WINDOWS=1
+# COMPILER_OPTIONS += -D__USE_MINGW_ANSI_STDIO=1
+ COMPILER_OPTIONS += -DON_WINDOWS=1
 endif
 
 # Do not build SIMD code if not on x86_64
