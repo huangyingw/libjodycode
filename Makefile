@@ -186,7 +186,7 @@ installdirs:
 	test -e $(DESTDIR)$(INC_DIR) || $(MKDIR) $(DESTDIR)$(INC_DIR)
 	test -e $(DESTDIR)$(MAN7_DIR) || $(MKDIR) $(DESTDIR)$(MAN7_DIR)
 
-installfiles:
+installfiles: installdirs
 	$(INSTALL_PROGRAM) $(PROGRAM_NAME)$(SO_VER_FULL) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_VER_FULL)
 	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_VER_FULL) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_VER_MAJOR)
 	-test "$(ON_WINDOWS)" != "1" && $(LN) $(PROGRAM_NAME)$(SO_VER_MAJOR) $(DESTDIR)$(LIB_DIR)/$(PROGRAM_NAME)$(SO_SUFFIX)
