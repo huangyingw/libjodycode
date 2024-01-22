@@ -1,4 +1,4 @@
-/* libjodycode: numerically correct case-insenstive string comparison
+/* libjodycode: numerically correct string comparison
  * that "sorts" symbols and spaces AFTER alphanumeric characters
  *
  * Copyright (C) 2014-2023 by Jody Bruchon <jody@jodybruchon.com>
@@ -13,7 +13,8 @@
 #define IS_LOWER(a) (((a >= 'a') && (a <= 'z')) ? 1 : 0)
 
 
-extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2)
+/* sensitive: 0 = case-sensitive, 1 = case-insensitive */
+extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2, int insensitive)
 {
   int len1 = 0, len2 = 0;
   int precompare;
@@ -73,8 +74,10 @@ extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2)
       /* Normal strcasecmp() style compare */
       char s1 = *c1, s2 = *c2;
       /* Convert lowercase into uppercase */
-      if (IS_LOWER(s1)) s1 = (char)(s1 - 32);
-      if (IS_LOWER(s2)) s2 = (char)(s2 - 32);
+      if (insensitive == 1) {
+	      if (IS_LOWER(s1)) s1 = (char)(s1 - 32);
+	      if (IS_LOWER(s2)) s2 = (char)(s2 - 32);
+      }
       if (s1 > s2) return 1;
       else return -1;
     }
