@@ -387,4 +387,8 @@ extern const unsigned char jc_api_versiontable[];
  #define jc_set_output_modes(a,b)
 #endif
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* LIBJODYCODE_H */
