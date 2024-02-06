@@ -8,7 +8,13 @@
 #include "libjodycode.h"
 #include "jody_hash.h"
 
-extern int jc_block_hash(jodyhash_t *data, jodyhash_t *hash, const size_t count)
+extern int jc_block_hash(enum jc_e_hash type, jodyhash_t *data, jodyhash_t *hash, const size_t count)
 {
-	return jody_block_hash(data, hash, count);
+	switch (type) {
+	default:
+	case NORMAL:
+		return jody_block_hash(data, hash, count);
+	case ROLLING:
+		return jody_rolling_block_hash(data, hash, count);
+	}
 }

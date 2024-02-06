@@ -294,7 +294,10 @@ extern int jc_fwprint(FILE * const restrict stream, const char * const restrict 
 #define JODY_HASH_WIDTH 64
 typedef uint64_t jodyhash_t;
 
-extern int jc_block_hash(jodyhash_t *data, jodyhash_t *hash, const size_t count);
+enum jc_e_hash { NORMAL, ROLLING };
+
+extern int jc_block_hash(enum jc_e_hash type, jodyhash_t *data, jodyhash_t *hash, const size_t count);
+//extern int jc_block_hash(jodyhash_t *data, jodyhash_t *hash, const size_t count);
 
 
 /*** oom ***/
