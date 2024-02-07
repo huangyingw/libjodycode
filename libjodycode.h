@@ -196,6 +196,8 @@ struct JC_STAT {
 #ifdef ON_WINDOWS
 typedef struct _JC_DIRENT_T {
 	uint64_t d_ino;
+	uint32_t d_namelen;  /* we already do a strlen() so may as well pass it on */
+	unsigned char d_type;
 	char d_name[1];
 } JC_DIRENT;
 
@@ -206,9 +208,35 @@ typedef struct _JC_DIR_T {
 	WIN32_FIND_DATA ffd;
 	JC_DIRENT dirent;
 } JC_DIR;
+ #define JC_HAS_DIRENT_NAMELEN
+ #define JC_HAS_DIRENT_TYPE
+ #define JC_DT_BLK 6
+ #define JC_DT_CHR 2
+ #define JC_DT_DIR 4
+ #define JC_DT_FIFO 1
+ #define JC_DT_LNK 10
+ #define JC_DT_REG 8
+ #define JC_DT_SOCK 12
+ #define JC_DT_UNKNOWN 0
+ #define JC_DT_WHT 14
 #else
+ #undef JC_HAS_DIRENT_NAMELEN
  #define JC_DIR DIR
  #define JC_DIRENT struct dirent
+ #ifdef DT_UNKNOWN  /* Cheap way to detect d_type support in the preprocessor */
+  #define JC_HAS_DIRENT_TYPE
+  #define JC_DT_BLK DT_BLK
+  #define JC_DT_CHR DT_CHR
+  #define JC_DT_DIR DT_DIR
+  #define JC_DT_FIFO DT_FIFO
+  #define JC_DT_LNK DT_LNK
+  #define JC_DT_REG DT_REG
+  #define JC_DT_SOCK DT_SOCK
+  #define JC_DT_UNKNOWN DT_UNKNOWN
+  #define JC_DT_WHT DT_WHT
+ #else
+  #undef JC_HAS_DIRENT_TYPE
+ #endif /* DT_UNKNOWN */
 #endif /* ON_WINDOWS */
 
 extern int32_t jc_errno;
@@ -297,7 +325,6 @@ typedef uint64_t jodyhash_t;
 enum jc_e_hash { NORMAL, ROLLING };
 
 extern int jc_block_hash(enum jc_e_hash type, jodyhash_t *data, jodyhash_t *hash, const size_t count);
-//extern int jc_block_hash(jodyhash_t *data, jodyhash_t *hash, const size_t count);
 
 
 /*** oom ***/

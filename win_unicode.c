@@ -81,7 +81,7 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA *ffd)
 #endif
 	size_t len;
 
-	if (dirp == NULL) goto error_null;
+	if (unlikely(dirp == NULL)) goto error_null;
 
 	if (hFind == NULL) {
 		if (unlikely(*dirp == NULL)) goto error_null;
@@ -104,6 +104,11 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA *ffd)
 	if (unlikely(*dirp == NULL)) goto error_nomem;
 	strcpy_s((*dirp)->dirent.d_name, len, ffd->cFileName);
  #endif
+	/* (*dirp)->dirent.ino = 0; // implicit via calloc() - Windows Find*File() doesn't return inode numbers */
+	(*dirp)->dirent.d_namelen = (uint32_t)len;
+	if (unlikely(ffd->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) (*dirp)->dirent.d_type = JC_DT_LNK;
+	else if (ffd->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) (*dirp)->dirent.d_type = JC_DT_DIR;
+	else (*dirp)->dirent.d_type = JC_DT_REG;
 
 	/* First call: init ffd/hFind + mark cached FindFirstFile() dirent */
 	if (hFind != NULL) {
