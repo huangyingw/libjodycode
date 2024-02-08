@@ -208,8 +208,8 @@ typedef struct _JC_DIR_T {
 	WIN32_FIND_DATA ffd;
 	JC_DIRENT dirent;
 } JC_DIR;
- #define JC_HAS_DIRENT_NAMLEN
- #define JC_HAS_DIRENT_TYPE
+ #define JC_DIRENT_HAVE_D_NAMLEN
+ #define JC_DIRENT_HAVE_D_TYPE
  #define JC_DT_BLK 6
  #define JC_DT_CHR 2
  #define JC_DT_DIR 4
@@ -220,11 +220,21 @@ typedef struct _JC_DIR_T {
  #define JC_DT_UNKNOWN 0
  #define JC_DT_WHT 14
 #else
- #undef JC_HAS_DIRENT_NAMLEN
+ #ifdef _DIRENT_HAVE_D_NAMLEN
+  #define JC_DIRENT_HAVE_D_NAMLEN
+ #endif
+ #ifdef _DIRENT_HAVE_D_TYPE
+  #define JC_DIRENT_HAVE_D_TYPE
+ #endif
+ #ifdef _DIRENT_HAVE_D_RECLEN
+  #define JC_DIRENT_HAVE_D_RECLEN
+ #endif
+ #ifdef _DIRENT_HAVE_D_OFF
+  #define JC_DIRENT_HAVE_D_OFF
+ #endif
  #define JC_DIR DIR
  #define JC_DIRENT struct dirent
  #ifdef DT_UNKNOWN  /* Cheap way to detect d_type support in the preprocessor */
-  #define JC_HAS_DIRENT_TYPE
   #define JC_DT_BLK DT_BLK
   #define JC_DT_CHR DT_CHR
   #define JC_DT_DIR DT_DIR
@@ -234,8 +244,6 @@ typedef struct _JC_DIR_T {
   #define JC_DT_SOCK DT_SOCK
   #define JC_DT_UNKNOWN DT_UNKNOWN
   #define JC_DT_WHT DT_WHT
- #else
-  #undef JC_HAS_DIRENT_TYPE
  #endif /* DT_UNKNOWN */
 #endif /* ON_WINDOWS */
 
