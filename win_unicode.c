@@ -105,7 +105,7 @@ extern int jc_ffd_to_dirent(JC_DIR **dirp, HANDLE hFind, WIN32_FIND_DATA *ffd)
 	strcpy_s((*dirp)->dirent.d_name, len, ffd->cFileName);
  #endif
 	/* (*dirp)->dirent.ino = 0; // implicit via calloc() - Windows Find*File() doesn't return inode numbers */
-	(*dirp)->dirent.d_namelen = (uint32_t)len;
+	(*dirp)->dirent.d_namlen = (uint32_t)len;
 	if (unlikely(ffd->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) (*dirp)->dirent.d_type = JC_DT_LNK;
 	else if (ffd->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) (*dirp)->dirent.d_type = JC_DT_DIR;
 	else (*dirp)->dirent.d_type = JC_DT_REG;

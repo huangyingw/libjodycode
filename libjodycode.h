@@ -196,7 +196,7 @@ struct JC_STAT {
 #ifdef ON_WINDOWS
 typedef struct _JC_DIRENT_T {
 	uint64_t d_ino;
-	uint32_t d_namelen;  /* we already do a strlen() so may as well pass it on */
+	uint32_t d_namlen;  /* we already do a strlen() so may as well pass it on */
 	unsigned char d_type;
 	char d_name[1];
 } JC_DIRENT;
@@ -208,7 +208,7 @@ typedef struct _JC_DIR_T {
 	WIN32_FIND_DATA ffd;
 	JC_DIRENT dirent;
 } JC_DIR;
- #define JC_HAS_DIRENT_NAMELEN
+ #define JC_HAS_DIRENT_NAMLEN
  #define JC_HAS_DIRENT_TYPE
  #define JC_DT_BLK 6
  #define JC_DT_CHR 2
@@ -220,7 +220,7 @@ typedef struct _JC_DIR_T {
  #define JC_DT_UNKNOWN 0
  #define JC_DT_WHT 14
 #else
- #undef JC_HAS_DIRENT_NAMELEN
+ #undef JC_HAS_DIRENT_NAMLEN
  #define JC_DIR DIR
  #define JC_DIRENT struct dirent
  #ifdef DT_UNKNOWN  /* Cheap way to detect d_type support in the preprocessor */
