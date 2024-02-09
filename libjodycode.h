@@ -24,7 +24,7 @@ extern "C" {
 #define LIBJODYCODE_API_VERSION       4
 #define LIBJODYCODE_API_FEATURE_LEVEL 4
 #define LIBJODYCODE_VER               "4.0"
-#define LIBJODYCODE_VERDATE           "2024-01-21"
+#define LIBJODYCODE_VERDATE           "2024-02-09"
 #ifdef UNICODE
  #define LIBJODYCODE_WINDOWS_UNICODE  1
 #else
