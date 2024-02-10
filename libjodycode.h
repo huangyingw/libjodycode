@@ -48,6 +48,19 @@ extern "C" {
 #include <stdint.h>
 #include <sys/types.h>
 
+#ifdef UNICODE
+ #ifndef JC_PATHBUF_SIZE
+  #define JC_PATHBUF_SIZE 65536
+ #endif
+#else
+ #ifndef JC_PATHBUF_SIZE
+  #define JC_PATHBUF_SIZE 32768
+ #endif
+#endif
+#ifndef WPATH_MAX
+ #define WPATH_MAX JC_PATHBUF_SIZE
+#endif
+
 #ifdef ON_WINDOWS
  #ifndef WIN32_LEAN_AND_MEAN
   #define WIN32_LEAN_AND_MAN
@@ -72,19 +85,6 @@ extern "C" {
 #include <dirent.h>
 #include <unistd.h>
 #endif /* ON_WINDOWS */
-
-#ifdef UNICODE
- #ifndef JC_PATHBUF_SIZE
-  #define JC_PATHBUF_SIZE 8192
- #endif
-#else
- #ifndef JC_PATHBUF_SIZE
-  #define JC_PATHBUF_SIZE 4096
- #endif
-#endif
-#ifndef WPATH_MAX
- #define WPATH_MAX JC_PATHBUF_SIZE
-#endif
 
 
 /*** C standard library functions ***/
@@ -255,6 +255,7 @@ extern char      *jc_getcwd(char *pathname, size_t size);
 extern FILE      *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int        jc_link(const char *path1, const char *path2);
 extern JC_DIR    *jc_opendir(const char * restrict path);
+extern size_t     jc_get_d_namlen(JC_DIRENT *dirent);
 extern JC_DIRENT *jc_readdir(JC_DIR *dirp);
 extern int        jc_rename(const char *oldpath, const char *newpath);
 extern int        jc_remove(const char *pathname);
