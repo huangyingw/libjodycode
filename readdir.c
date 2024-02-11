@@ -4,9 +4,7 @@
  * Released under The MIT License
  */
 
-#ifndef ON_WINDOWS
- #include <dirent.h>
-#endif
+#include <dirent.h>
 #include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
