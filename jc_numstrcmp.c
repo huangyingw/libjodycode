@@ -6,6 +6,7 @@
  */
 
 #include <stdlib.h>
+#include <stdint.h>
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 
@@ -14,12 +15,17 @@
 
 
 /* sensitive: 0 = case-sensitive, 1 = case-insensitive */
-extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2, int insensitive)
+extern int jc_numeric_strcmp(const char * restrict c1, const char * restrict c2, const int insensitive)
 {
   int precompare;
-  char *rewind1, *rewind2;
+  uintptr_t len1, len2;
+  const char *rewind1, *rewind2;
+  const char *start1, *start2;
 
   if (unlikely(c1 == NULL || c2 == NULL)) return JC_ENUMSTRCMP;
+
+  start1 = c1;
+  start2 = c2;
 
   while (unlikely(*c1 != '\0' && *c2 != '\0')) {
     /* Reset string rewind points */
@@ -81,9 +87,11 @@ extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2, int insensi
     }
   }
 
+  len1 = (uintptr_t)start1 - (uintptr_t)c1;
+  len2 = (uintptr_t)start2 - (uintptr_t)c2;
   /* Longer strings generally sort later */
-  if (c1 < c2) return -1;
-  if (c1 > c2) return 1;
+  if (len1 < len2) return -1;
+  if (len1 > len2) return 1;
 
   /* Normal comparison - FIXME? length check should already handle these */
   if (unlikely(*c1 == '\0' && *c2 != '\0')) return -1;

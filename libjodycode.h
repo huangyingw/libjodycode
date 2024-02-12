@@ -366,7 +366,7 @@ extern const struct jc_size_suffix jc_size_suffix[];
 
 /* Numerically-correct string sort with a little extra intelligence
    insensitive: 0 = case-sensitive, 1 = case-insensitive */
-extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2, int insensitive);
+extern int jc_numeric_strcmp(const char * restrict c1, const char * restrict c2, const int insensitive);
 
 
 /*** string ***/
