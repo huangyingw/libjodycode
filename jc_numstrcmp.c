@@ -16,19 +16,18 @@
 /* sensitive: 0 = case-sensitive, 1 = case-insensitive */
 extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2, int insensitive)
 {
-  int len1 = 0, len2 = 0;
   int precompare;
   char *rewind1, *rewind2;
 
   if (unlikely(c1 == NULL || c2 == NULL)) return JC_ENUMSTRCMP;
 
   while (unlikely(*c1 != '\0' && *c2 != '\0')) {
-    /* Reset string length counters and rewind points */
-    len1 = 0; len2 = 0; rewind1 = c1; rewind2 = c2;
+    /* Reset string rewind points */
+    rewind1 = c1; rewind2 = c2;
 
     /* Skip all sequences of zeroes */
-    for (; *c1 == '0'; c1++, len1++);
-    for (; *c2 == '0'; c2++, len2++);
+    while (*c1 == '0') c1++;
+    while (*c2 == '0') c2++;
 
     /* If both chars are numeric, do a numeric comparison */
     if (IS_NUM(*c1) && IS_NUM(*c2)) {
@@ -38,12 +37,11 @@ extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2, int insensi
       while (IS_NUM(*c1) && IS_NUM(*c2)) {
         if (*c1 < *c2) precompare = -1;
         if (*c1 > *c2) precompare = 1;
-        len1++; len2++;
         c1++; c2++;
 
         /* Skip remaining digit pairs after any difference is found */
         if (precompare != 0) {
-          for (; IS_NUM(*c1) && IS_NUM(*c2); len1++, len2++, c1++, c2++);
+          for (; IS_NUM(*c1) && IS_NUM(*c2); c1++, c2++);
           break;
         }
       }
@@ -59,12 +57,12 @@ extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2, int insensi
       if (precompare != 0) return precompare;
     } else {
       /* Zeroes aren't followed by a digit; rewind the streams */
-      c1 = rewind1; c2 = rewind2; len1 = 0; len2 = 0;
+      c1 = rewind1; c2 = rewind2;
     }
 
     /* Do normal comparison */
     if (likely(*c1 == *c2 && *c1 != '\0' && *c2 != '\0')) {
-      c1++; c2++; len1++; len2++;
+      c1++; c2++;
     /* Put symbols and spaces after everything else */
     } else if (*c2 < '.' && *c1 >= '.') {
       return -1;
@@ -84,8 +82,8 @@ extern int jc_numeric_strcmp(char * restrict c1, char * restrict c2, int insensi
   }
 
   /* Longer strings generally sort later */
-  if (len1 < len2) return -1;
-  if (len1 > len2) return 1;
+  if (c1 < c2) return -1;
+  if (c1 > c2) return 1;
 
   /* Normal comparison - FIXME? length check should already handle these */
   if (unlikely(*c1 == '\0' && *c2 != '\0')) return -1;
