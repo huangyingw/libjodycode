@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <libjodycode.h>
+#include "libjodycode.h"
 
 /* Apple clonefile() is basically a hard link */
 #ifdef ENABLE_DEDUPE
@@ -108,7 +108,6 @@ void jc_dedupefiles(file_t * restrict files)
 					fprintf(stderr, "%s (%d)\n", strerror(errno), errno);
 					exit_status = EXIT_FAILURE;
 				}
-			}
 			} else {
 				/* Dedupe OK; report to the user and add to file count */
 				printf("====> %s\n", dupefile->d_name);
@@ -128,7 +127,6 @@ void jc_dedupefiles(file_t * restrict files)
 #endif /* __APPLE__ */
 	return;
 }
-#endif /* ENABLE_DEDUPE */
 
 
 #ifdef ENABLE_CLONEFILE_LINK
