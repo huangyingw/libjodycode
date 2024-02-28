@@ -21,19 +21,17 @@
 /* Extract d_namlen from struct dirent */
 extern size_t jc_get_d_namlen(JC_DIRENT *dirent)
 {
-#if defined ON_WINDOWS || defined _DIRENT_HAVE_D_NAMLEN
 	if (unlikely(dirent == NULL)) goto error_bad_dirent;
+#ifdef _DIRENT_HAVE_D_NAMLEN
 	return dirent->d_namlen;
 #elif defined _DIRENT_HAVE_D_RECLEN
 	const size_t base = (sizeof(struct dirent) - sizeof(((struct dirent *)0)->d_name)) - offsetof(struct dirent, d_name) - 1;
 	size_t skip;
 
-	if (unlikely(dirent == NULL)) goto error_bad_dirent;
 	skip = dirent->d_reclen - (sizeof(struct dirent) - sizeof(((struct dirent *)0)->d_name));
 	if (skip > 0) skip -= base;
 	return skip + strlen(dirent->d_name + skip);
 #else
-	if (unlikely(dirent == NULL)) goto error_bad_dirent;
 	return strlen(dirent->d_name);
 #endif
 error_bad_dirent:
