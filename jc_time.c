@@ -9,6 +9,9 @@
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 
+#define NTTIME_CONSTANT 116444736000000000ULL;
+#define NTTIME_NSEC 10000000ULL;
+
 #define REQ_NUM(a) { if (a < '0' || a > '9') return JC_EDATETIME; }
 #define ATONUM(a,b) (a = b - '0')
 /* Fast multiplies by 100 (*64 + *32 + *4) and 10 (*8 + *2)
@@ -79,28 +82,20 @@ skip_time:
 
 
 #ifdef ON_WINDOWS
-/* Convert NT epoch to UNIX epoch */
-extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp)
+extern int jc_nttime_to_unixtime(uint64_t *nttime, struct JC_TIMESPEC *unixtime)
 {
-	uint64_t newstamp;
-
-	memcpy(&newstamp, timestamp, sizeof(uint64_t));
-	newstamp /= 10000000LL;
-	if (unlikely(newstamp <= 11644473600LL)) return 0;
-	newstamp -= 11644473600LL;
-	return (time_t)newstamp;
+	if (unlikely(nttime == NULL || *nttime <= NTTIME_CONSTANT || unixtime == NULL)) return -1;
+	unixtime->tv_sec = (*nttime - NTTIME_CONSTANT) / NTTIME_NSEC;
+	unixtime->tv_nsec = ((*nttime - NTTIME_CONSTANT) % NTTIME_NSEC) * 100;
+	return 0;
 }
 
 
-/* Convert UNIX epoch to NT epoch */
-extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp)
+extern int jc_unixtime_to_nttime(struct JC_TIMESPEC *unixtime, uint64_t *nttime)
 {
-	uint64_t newstamp;
-
-	memcpy(&newstamp, timestamp, sizeof(uint64_t));
-	newstamp += 11644473600LL;
-	newstamp *= 10000000LL;
-	if (unlikely(newstamp <= 11644473600LL)) return 0;
-	return (time_t)newstamp;
+	if (unlikely(nttime == NULL || unixtime == NULL)) return -1;
+	*nttime = (unixtime->tv_sec * NTTIME_NSEC) + (unixtime->tv_nsec / 100) + NTTIME_CONSTANT;
+	if (unlikely(*nttime <= NTTIME_CONSTANT)) return -1;
+	return 0;
 }
 #endif  /* ON_WINDOWS */

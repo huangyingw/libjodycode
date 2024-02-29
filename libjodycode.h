@@ -91,15 +91,21 @@ extern "C" {
 
 /* For Windows: provide stat-style functionality */
 #ifdef ON_WINDOWS
+struct JC_TIMESPEC {
+	time_t tv_sec;
+	long tv_nsec;
+};
+
 struct JC_STAT {
 	uint64_t st_ino;
 	int64_t st_size;
 	uint32_t st_dev;
 	uint32_t st_nlink;
 	uint32_t st_mode;
-	time_t st_ctime;
-	time_t st_mtime;
-	time_t st_atime;
+	struct JC_TIMESPEC st_atim;
+	struct JC_TIMESPEC st_mtim;
+	struct JC_TIMESPEC st_ctim;
+	/* legacy st_*time should be avoided. Use st_*tim.tv_sec instead. */
 };
 
 /* stat() macros for Windows "mode" flags (file attributes) */
@@ -116,11 +122,12 @@ struct JC_STAT {
  #define JC_S_ISREG(st_mode) ((st_mode & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ? 0 : 1)
  #define JC_S_ISLNK(st_mode) ((st_mode & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0)
 
- extern time_t jc_nttime_to_unixtime(const uint64_t * const restrict timestamp);
- extern time_t jc_unixtime_to_nttime(const uint64_t * const restrict timestamp);
+ extern int jc_nttime_to_unixtime(uint64_t *nttime, struct JC_TIMESPEC *unixtime);
+ extern int jc_unixtime_to_nttime(struct JC_TIMESPEC *unixtime, uint64_t *nttime);
 #else
  #include <sys/stat.h>
  #define JC_STAT stat
+ #define JC_TIMESPEC timespec
  #define JC_S_ISARCHIVE(st_mode) 0
  #define JC_S_ISRO(st_mode) 0
  #define JC_S_ISHIDDEN(st_mode) 0
