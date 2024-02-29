@@ -346,7 +346,7 @@ extern int jc_block_hash(enum jc_e_hash type, jodyhash_t *data, jodyhash_t *hash
 /*** oom ***/
 
 /* Out-of-memory and null pointer error-exit functions */
-extern void jc_oom(const char * const restrict msg);
+extern void jc_oom(const char * restrict msg);
 extern void jc_nullptr(const char * restrict func);
 
 

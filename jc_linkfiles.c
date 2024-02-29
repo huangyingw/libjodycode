@@ -84,10 +84,10 @@ void jc_dedupefiles(file_t * restrict files)
 			fdri->status = FILE_DEDUPE_RANGE_SAME;
 			/* Consume data blocks until no data remains */
 			while (remain) {
-				errno = 0;
 				fdr->src_offset = (uint64_t)(dupefile->size - remain);
 				fdri->dest_offset = fdr->src_offset;
 				fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
+				errno = 0;
 				ioctl(src_fd, FIDEDUPERANGE, fdr);
 				if (fdri->status < 0) break;
 				remain -= (off_t)fdr->src_length;
