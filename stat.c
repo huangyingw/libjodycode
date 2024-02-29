@@ -32,20 +32,20 @@ extern int jc_stat(const char *filename, struct JC_STAT *buf)
 	uint64_t timetemp;
 #endif
 
-	if (unlikely(!buf)) return JC_ENULL;
+	if (unlikely(!buf)) goto error_null_buffer;
 
 #ifdef ON_WINDOWS
  #ifdef UNICODE
 	JC_WCHAR_T *widename;
 
-	if (jc_string_to_wstring(filename, &widename) != 0) return JC_EALLOC;
+	if (jc_string_to_wstring(filename, &widename) != 0) goto error_string;
 	hFile = CreateFileW(widename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	free(widename);
  #else
 	hFile = CreateFileA(filename, 0, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
  #endif
-	if (unlikely(hFile == INVALID_HANDLE_VALUE)) goto win_failure;
-	if (unlikely(GetFileInformationByHandle(hFile, &bhfi) == 0)) goto win_failure;
+	if (unlikely(hFile == INVALID_HANDLE_VALUE)) goto error_file;
+	if (unlikely(GetFileInformationByHandle(hFile, &bhfi) == 0)) goto error_file;
 
 	buf->st_ino = ((uint64_t)(bhfi.nFileIndexHigh) << 32) + (uint64_t)bhfi.nFileIndexLow;
 	buf->st_size = ((int64_t)(bhfi.nFileSizeHigh) << 32) + (int64_t)bhfi.nFileSizeLow;
@@ -68,7 +68,14 @@ extern int jc_stat(const char *filename, struct JC_STAT *buf)
 	return retval;
 
 #ifdef ON_WINDOWS
-win_failure:
+error_string:
+#endif
+error_null_buffer:
+	jc_errno = EFAULT;
+	return -1;
+
+#ifdef ON_WINDOWS
+error_file:
 	jc_errno = jc_GetLastError();
 	if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
 	return -1;
