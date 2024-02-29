@@ -4,6 +4,7 @@
  * Released under The MIT License
  */
 
+#include <errno.h>
 #include <string.h>
 #include <time.h>
 #include "likely_unlikely.h"
@@ -14,16 +15,18 @@
 
 #define REQ_NUM(a) { if (a < '0' || a > '9') return JC_EDATETIME; }
 #define ATONUM(a,b) (a = b - '0')
-/* Fast multiplies by 100 (*64 + *32 + *4) and 10 (*8 + *2)
- * for platforms where multiply instructions are expensive */
-#ifdef STRTOEPOCH_USE_SHIFT_MULTIPLY
- #define MUL100(a) ((a << 6) + (a << 5) + (a << 2))
- #define MUL10(a) ((a << 3) + a + a)
-#else
- #define MUL100(a) (a * 100)
- #define MUL10(a) (a * 10)
-#endif /* STRTOEPOCH_USE_SHIFT_MULTIPLY */
 
+
+static int twodigit_atoi(const char * restrict p)
+{
+	int i, val;
+
+	if (*p < '0' || *p > '9') return -1;
+	ATONUM(i, *p); val = i * 10; p++;
+	if (*p < '0' || *p > '9') return -1;
+	ATONUM(i, *p); val += i; p++;
+	return val;
+}
 
 /* Accepts date[time] strings "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS"
  * and returns the number of seconds since the Unix Epoch a la mktime()
@@ -35,49 +38,61 @@ extern time_t jc_strtoepoch(const char * const datetime)
 	int i;
 	struct tm tm;
 
-	if (unlikely(datetime == NULL || *datetime == '\0')) return JC_ENULL;
+	if (unlikely(datetime == NULL || *datetime == '\0')) goto error_null;
 	memset(&tm, 0, sizeof(struct tm));
 
-	/* This code replaces "*10" with shift<<3 + add + add */
 	/* Process year */
 	tm.tm_year = 1000;
 	REQ_NUM(*p); if (*p == '2') tm.tm_year = 2000; p++;
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_year += MUL100(i); p++;
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_year += MUL10(i); p++;
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_year += i; p++;
-	tm.tm_year -= 1900;  /* struct tm year is since 1900 */
-	if (*p != '-') return JC_EDATETIME;
+	REQ_NUM(*p); ATONUM(i, *p); tm.tm_year += i * 100; p++;
+	i = twodigit_atoi(p); if (i < 1) goto error_datetime;
+	tm.tm_year = i - 1900;  /* struct tm year is since 1900 */
+	p += 2;
+	if (*p != '-') goto error_datetime;
 	p++;
 	/* Process month (0-11, not 1-12) */
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_mon = MUL10(i); p++;
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_mon += (i - 1); p++;
-	if (*p != '-') return JC_EDATETIME;
+	i = twodigit_atoi(p); if (i < 1) goto error_datetime;
+	tm.tm_mon = i - 1;
+	p += 2;
+	if (*p != '-') goto error_datetime;
 	p++;
 	/* Process day */
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_mday = MUL10(i); p++;
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_mday += i; p++;
+	i = twodigit_atoi(p); if (i < 1) goto error_datetime;
+	tm.tm_mday = i;
+	p += 2;
 	/* If YYYY-MM-DD is specified only, skip the time part */
 	if (*p == '\0') goto skip_time;
-	if (*p != ' ') return JC_EDATETIME; else p++;
+	if (*p != ' ') goto error_datetime; else p++;
 	/* Process hours */
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_hour = MUL10(i); p++;
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_hour += i; p++;
-	if (*p != ':') return JC_EDATETIME;
+	i = twodigit_atoi(p); if (i < 1) goto error_datetime;
+	tm.tm_hour = i;
+	p += 2;
+	if (*p != ':') goto error_datetime;
 	p++;
 	/* Process minutes */
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_min = MUL10(i); p++;
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_min += i; p++;
-	if (*p != ':') return JC_EDATETIME;
+	i = twodigit_atoi(p); if (i < 1) goto error_datetime;
+	tm.tm_min = i;
+	p += 2;
+	if (*p != ':') goto error_datetime;
 	p++;
 	/* Process seconds */
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_sec = MUL10(i); p++;
-	REQ_NUM(*p); ATONUM(i, *p); tm.tm_sec += i; p++;
+	i = twodigit_atoi(p); if (i < 1) goto error_datetime;
+	tm.tm_sec = i;
+	p += 2;
 	/* Junk after datetime string should cause an error */
-	if (*p != '\0') return JC_EDATETIME;
+	if (*p != '\0') goto error_datetime;
 skip_time:
 	tm.tm_isdst = -1;  /* Let the host library decide if DST is in effect */
+	errno = 0;
 	secs = mktime(&tm);
+	if (secs == -1) jc_errno = errno;
 	return secs;
+error_null:
+	jc_errno = JC_ENULL;
+	return -1;
+error_datetime:
+	jc_errno = JC_EDATETIME;
+	return -1;
 }
 
 

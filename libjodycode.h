@@ -389,7 +389,7 @@ extern int jc_streq(const char *s1, const char *s2);
 
 /* Convert a date/time string to seconds since the epoch
  * Format must be "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS" */
-time_t jc_strtoepoch(const char * const datetime);
+extern time_t jc_strtoepoch(const char * const datetime);
 
 
 /*** version ***/
