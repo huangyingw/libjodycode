@@ -401,8 +401,6 @@ extern const int jc_api_version;
 extern const int jc_api_featurelevel;
 extern const int jc_jodyhash_version;
 extern const int jc_windows_unicode;
-/* This table is used for API compatibility checks */
-extern const unsigned char jc_api_versiontable[];
 
 
 /*** win_unicode ***/
