@@ -4,3 +4,6 @@
 [gsync]
     remote = origin
     target = origin/master
+[gdio]
+    ignore = ./.gitconfig
+    ignore = ./install.sh
