@@ -1,9 +1,11 @@
-[remote "origin"]
+[remote "jbruchon"]
 	url = https://codeberg.org/jbruchon/libjodycode.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+	fetch = +refs/heads/*:refs/remotes/jbruchon/*
 [gsync]
-    remote = origin
-    target = origin/master
+    remote = jbruchon
+    target = jbruchon/master
 [gdio]
     ignore = ./.gitconfig
     ignore = ./install.sh
+[push]
+    remote = origin
