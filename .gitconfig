@@ -1,3 +1,6 @@
 [remote "origin"]
 	url = https://codeberg.org/jbruchon/libjodycode.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
+[gsync]
+    remote = origin
+    target = origin/master
