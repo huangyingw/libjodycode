@@ -10,8 +10,8 @@
 #include "likely_unlikely.h"
 #include "libjodycode.h"
 
-#define NTTIME_CONSTANT 116444736000000000ULL;
-#define NTTIME_NSEC 10000000ULL;
+#define NTTIME_CONSTANT 116444736000000000
+#define NTTIME_NSEC 10000000
 
 #define ATONUM(a,b) (a = b - '0')
 
@@ -98,20 +98,24 @@ error_datetime:
 
 
 #ifdef ON_WINDOWS
-extern int jc_nttime_to_unixtime(uint64_t *nttime, struct JC_TIMESPEC *unixtime)
+extern int jc_nttime_to_unixtime(FILETIME *filetime, struct JC_TIMESPEC *unixtime)
 {
-	if (unlikely(nttime == NULL || *nttime <= NTTIME_CONSTANT || unixtime == NULL)) return -1;
-	unixtime->tv_sec = (*nttime - NTTIME_CONSTANT) / NTTIME_NSEC;
-	unixtime->tv_nsec = ((*nttime - NTTIME_CONSTANT) % NTTIME_NSEC) * 100;
+	uint64_t nttime = ((uint64_t)(filetime->dwHighDateTime) << 32) + filetime->dwLowDateTime;
+	if (unlikely(filetime == NULL || nttime <= NTTIME_CONSTANT || unixtime == NULL)) return -1;
+	unixtime->tv_sec = (time_t)((nttime - NTTIME_CONSTANT) / NTTIME_NSEC);
+	unixtime->tv_nsec = (long)(((nttime - NTTIME_CONSTANT) % NTTIME_NSEC) * 100);
 	return 0;
 }
 
 
-extern int jc_unixtime_to_nttime(struct JC_TIMESPEC *unixtime, uint64_t *nttime)
+extern int jc_unixtime_to_nttime(struct JC_TIMESPEC *unixtime, FILETIME *filetime)
 {
-	if (unlikely(nttime == NULL || unixtime == NULL)) return -1;
-	*nttime = (unixtime->tv_sec * NTTIME_NSEC) + (unixtime->tv_nsec / 100) + NTTIME_CONSTANT;
-	if (unlikely(*nttime <= NTTIME_CONSTANT)) return -1;
+	uint64_t nttime;
+	if (unlikely(filetime == NULL || unixtime == NULL)) return -1;
+	nttime = (uint64_t)((unixtime->tv_sec * NTTIME_NSEC) + (unixtime->tv_nsec / 100) + NTTIME_CONSTANT);
+	if (unlikely(nttime <= NTTIME_CONSTANT)) return -1;
+	filetime->dwHighDateTime = (DWORD)(nttime >> 32);
+	filetime->dwLowDateTime = (DWORD)nttime - filetime->dwHighDateTime;
 	return 0;
 }
 #endif  /* ON_WINDOWS */

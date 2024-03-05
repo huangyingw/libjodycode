@@ -29,7 +29,6 @@ extern int jc_stat(const char *filename, struct JC_STAT *buf)
 #ifdef ON_WINDOWS
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 	BY_HANDLE_FILE_INFORMATION bhfi;
-	uint64_t timetemp;
 #endif
 
 	if (unlikely(!buf)) goto error_null_buffer;
@@ -49,12 +48,9 @@ extern int jc_stat(const char *filename, struct JC_STAT *buf)
 
 	buf->st_ino = ((uint64_t)(bhfi.nFileIndexHigh) << 32) + (uint64_t)bhfi.nFileIndexLow;
 	buf->st_size = ((int64_t)(bhfi.nFileSizeHigh) << 32) + (int64_t)bhfi.nFileSizeLow;
-	timetemp = ((uint64_t)(bhfi.ftCreationTime.dwHighDateTime) << 32) + bhfi.ftCreationTime.dwLowDateTime;
-	buf->st_ctime = jc_nttime_to_unixtime(&timetemp);
-	timetemp = ((uint64_t)(bhfi.ftLastWriteTime.dwHighDateTime) << 32) + bhfi.ftLastWriteTime.dwLowDateTime;
-	buf->st_mtime = jc_nttime_to_unixtime(&timetemp);
-	timetemp = ((uint64_t)(bhfi.ftLastAccessTime.dwHighDateTime) << 32) + bhfi.ftLastAccessTime.dwLowDateTime;
-	buf->st_atime = jc_nttime_to_unixtime(&timetemp);
+	if (unlikely(jc_nttime_to_unixtime(&(bhfi.ftCreationTime), &(buf->st_ctim)) != 0)) goto error_nttime;
+	if (unlikely(jc_nttime_to_unixtime(&(bhfi.ftLastWriteTime), &(buf->st_mtim)) != 0)) goto error_nttime;
+	if (unlikely(jc_nttime_to_unixtime(&(bhfi.ftLastAccessTime), &(buf->st_atim)) != 0)) goto error_nttime;
 	buf->st_dev = (uint32_t)bhfi.dwVolumeSerialNumber;
 	buf->st_nlink = (uint32_t)bhfi.nNumberOfLinks;
 	buf->st_mode = (uint32_t)bhfi.dwFileAttributes;
@@ -76,6 +72,7 @@ error_null_buffer:
 
 #ifdef ON_WINDOWS
 error_file:
+error_nttime:
 	jc_errno = jc_GetLastError();
 	if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
 	return -1;

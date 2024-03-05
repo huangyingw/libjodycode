@@ -122,8 +122,8 @@ struct JC_STAT {
  #define JC_S_ISREG(st_mode) ((st_mode & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ? 0 : 1)
  #define JC_S_ISLNK(st_mode) ((st_mode & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0)
 
- extern int jc_nttime_to_unixtime(uint64_t *nttime, struct JC_TIMESPEC *unixtime);
- extern int jc_unixtime_to_nttime(struct JC_TIMESPEC *unixtime, uint64_t *nttime);
+ extern int jc_nttime_to_unixtime(FILETIME *filetime, struct JC_TIMESPEC *unixtime);
+ extern int jc_unixtime_to_nttime(struct JC_TIMESPEC *unixtime, FILETIME *filetime);
 #else
  #include <sys/stat.h>
  #define JC_STAT stat
