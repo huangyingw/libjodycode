@@ -308,19 +308,21 @@ extern const char *jc_get_errname(int errnum);
 extern const char *jc_get_errdesc(int errnum);
 extern int jc_print_error(int errnum);
 
-#define JC_ENOERROR   0
-#define JC_ENULL      1
-#define JC_EGETCWD    2
-#define JC_ECDOTDOT   3
-#define JC_EGRNEND    4
-#define JC_EBADERR    5
-#define JC_EBADARGV   6
-#define JC_EMBWC      7
-#define JC_EALARM     8
-#define JC_EALLOC     9
-#define JC_ENUMSTRCMP 10
-#define JC_EDATETIME  11
-#define JC_EWIN32API  12
+#define JC_ERRORCODE_START 1024
+
+#define JC_ENOERROR   1024
+#define JC_ENULL      1025
+#define JC_EGETCWD    1026
+#define JC_ECDOTDOT   1027
+#define JC_EGRNEND    1028
+#define JC_EBADERR    1029
+#define JC_EBADARGV   1030
+#define JC_EMBWC      1031
+#define JC_EALARM     1032
+#define JC_EALLOC     1033
+#define JC_ENUMSTRCMP 1034
+#define JC_EDATETIME  1035
+#define JC_EWIN32API  1036
 
 
 /*** jc_fwprint ***/
