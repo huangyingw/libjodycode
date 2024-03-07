@@ -140,16 +140,6 @@ static void clonefile_error(const char * const restrict func, const char * const
 #endif /* ENABLE_CLONEFILE_LINK */
 
 
-/* Only build this function if some functionality does not exist */
-#if defined NO_SYMLINKS || defined NO_HARDLINKS || !defined ENABLE_CLONEFILE_LINK
-static void linkfiles_nosupport(const char * const restrict call, const char * const restrict type)
-{
-	fprintf(stderr, "internal error: linkfiles(%s) called without %s support\nPlease report this to the author as a program bug\n", call, type);
-	exit(EXIT_FAILURE);
-}
-#endif /* anything unsupported */
-
-
 static void revert_failed(const char * const restrict orig, const char * const restrict current)
 {
 	fprintf(stderr, "\nwarning: couldn't revert the file to its original name\n");
@@ -161,7 +151,7 @@ static void revert_failed(const char * const restrict orig, const char * const r
 
 
 /* linktype: 0=symlink, 1=hardlink, 2=clonefile() */
-void jc_linkfiles(file_t **files, const int count, const int linktype)
+extern int jc_linkfiles(file_t **files, const int count, const int linktype)
 {
 	int *srcfile;
 	file_t ** restrict dupelist;
@@ -190,7 +180,7 @@ void jc_linkfiles(file_t **files, const int count, const int linktype)
 			srcfile = 0;
 			x = 2;
 #else
-			linkfiles_nosupport("hard", "hard link");
+			return -1;
 #endif
 		} else {
 #ifndef NO_SYMLINKS
