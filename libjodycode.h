@@ -198,6 +198,7 @@ struct JC_STAT {
  #define JC_W_OK W_OK
  #define JC_X_OK X_OK
 #endif /* Windows */
+extern int jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
 
 
 /*** dir ***/
@@ -258,20 +259,18 @@ typedef struct _JC_DIR_T {
   #define JC_DT_WHT DT_WHT
  #endif /* DT_UNKNOWN */
 #endif /* ON_WINDOWS */
+extern int jc_closedir(JC_DIR *dirp);
+extern JC_DIR *jc_opendir(const char * restrict path);
+extern JC_DIRENT *jc_readdir(JC_DIR *dirp);
 
-extern int32_t jc_errno;
 
 extern int        jc_access(const char *pathname, int mode);
-extern int        jc_closedir(JC_DIR *dirp);
 extern char      *jc_getcwd(char *pathname, size_t size);
 extern FILE      *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int        jc_link(const char *path1, const char *path2);
-extern JC_DIR    *jc_opendir(const char * restrict path);
 extern size_t     jc_get_d_namlen(JC_DIRENT *dirent);
-extern JC_DIRENT *jc_readdir(JC_DIR *dirp);
 extern int        jc_rename(const char *oldpath, const char *newpath);
 extern int        jc_remove(const char *pathname);
-extern int        jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
 
 
 /*** alarm ***/
@@ -309,6 +308,7 @@ extern void jc_get_proc_cacheinfo(struct jc_proc_cacheinfo *pci);
 
 /*** error ***/
 
+extern int32_t jc_errno;
 extern const char *jc_get_errname(int errnum);
 extern const char *jc_get_errdesc(int errnum);
 extern int jc_print_error(int errnum);
