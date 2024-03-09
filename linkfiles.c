@@ -32,7 +32,7 @@
  #define KERNEL_DEDUP_MAX_SIZE 16777216
 #endif /* __linux__ */
 
-void jc_dedupefiles(file_t * restrict files)
+void jc_dedupe(struct jc_fileinfo *file1, struct jc_fileinfo *file2)
 {
 #ifdef __linux__
 	struct file_dedupe_range *fdr;
@@ -43,101 +43,67 @@ void jc_dedupefiles(file_t * restrict files)
 	fdr = (struct file_dedupe_range *)calloc(1, sizeof(struct file_dedupe_range) + sizeof(struct file_dedupe_range_info) + 1);
 	fdr->dest_count = 1;
 	fdri = &fdr->info[0];
-	for (curfile = files; curfile; curfile = curfile->next) {
-		/* Skip all files that have no duplicates */
-		if (!ISFLAG(curfile->flags, FF_DUPE_CHAIN_HEAD)) continue;
-		CLEARFLAG(curfile->flags, FF_DUPE_CHAIN_HEAD);
+	/* Run dedupe for each set */
+	for (int i = 0; files[i]->status > 0; i++) {
+		off_t remain;
+		int err;
 
-		/* For each duplicate list head, handle the duplicates in the list */
-		curfile2 = curfile;
-		src_fd = open(curfile->d_name, O_RDONLY);
-		/* If an open fails, keep going down the dupe list until it is exhausted */
-		while (src_fd == -1 && curfile2->duplicates && curfile2->duplicates->duplicates) {
-			fprintf(stderr, "dedupe: open failed (skipping): %s\n", curfile2->d_name);
+		/* TODO: cherry-pick first file */
+
+		/* Don't pass hard links to dedupe */
+		if (dupefile->device == curfile->device && dupefile->inode == curfile->inode) {
+			printf("-==-> %s\n", dupefile->d_name);
+			continue;
+		}
+
+		/* Open destination file, skipping any that fail */
+		fdri->dest_fd = open(dupefile->d_name, O_RDONLY);
+		if (fdri->dest_fd == -1) {
+			fprintf(stderr, "dedupe: open failed (skipping): %s\n", dupefile->d_name);
 			exit_status = EXIT_FAILURE;
-			curfile2 = curfile2->duplicates;
-			src_fd = open(curfile2->d_name, O_RDONLY);
+			continue;
 		}
-		if (src_fd == -1) continue;
 
-		/* Run dedupe for each set */
-		for (dupefile = curfile->duplicates; dupefile; dupefile = dupefile->duplicates) {
-			off_t remain;
-			int err;
+		/* Dedupe src <--> dest, 16 MiB or less at a time */
+		remain = dupefile->size;
+		fdri->status = FILE_DEDUPE_RANGE_SAME;
+		/* Consume data blocks until no data remains */
+		while (remain) {
+			fdr->src_offset = (uint64_t)(dupefile->size - remain);
+			fdri->dest_offset = fdr->src_offset;
+			fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
+			errno = 0;
+			ioctl(src_fd, FIDEDUPERANGE, fdr);
+			if (fdri->status < 0) break;
+			remain -= (off_t)fdr->src_length;
+		}
 
-			/* Don't pass hard links to dedupe */
-			if (dupefile->device == curfile->device && dupefile->inode == curfile->inode) {
-				printf("-==-> %s\n", dupefile->d_name);
-				continue;
-			}
-
-			/* Open destination file, skipping any that fail */
-			fdri->dest_fd = open(dupefile->d_name, O_RDONLY);
-			if (fdri->dest_fd == -1) {
-				fprintf(stderr, "dedupe: open failed (skipping): %s\n", dupefile->d_name);
+		/* Handle any errors */
+		err = fdri->status;
+		if (err != FILE_DEDUPE_RANGE_SAME || errno != 0) {
+			printf("-XX-> %s\n", dupefile->d_name);
+			fprintf(stderr, "error: ");
+			if (err == FILE_DEDUPE_RANGE_DIFFERS) {
+				fprintf(stderr, "not identical (files modified between scan and dedupe?)\n");
 				exit_status = EXIT_FAILURE;
-				continue;
+			} else if (err != 0) {
+				fprintf(stderr, "%s (%d)\n", strerror(-err), err);
+				exit_status = EXIT_FAILURE;
+			} else if (errno != 0) {
+				fprintf(stderr, "%s (%d)\n", strerror(errno), errno);
+				exit_status = EXIT_FAILURE;
 			}
-
-			/* Dedupe src <--> dest, 16 MiB or less at a time */
-			remain = dupefile->size;
-			fdri->status = FILE_DEDUPE_RANGE_SAME;
-			/* Consume data blocks until no data remains */
-			while (remain) {
-				fdr->src_offset = (uint64_t)(dupefile->size - remain);
-				fdri->dest_offset = fdr->src_offset;
-				fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
-				errno = 0;
-				ioctl(src_fd, FIDEDUPERANGE, fdr);
-				if (fdri->status < 0) break;
-				remain -= (off_t)fdr->src_length;
-			}
-
-			/* Handle any errors */
-			err = fdri->status;
-			if (err != FILE_DEDUPE_RANGE_SAME || errno != 0) {
-				printf("-XX-> %s\n", dupefile->d_name);
-				fprintf(stderr, "error: ");
-				if (err == FILE_DEDUPE_RANGE_DIFFERS) {
-					fprintf(stderr, "not identical (files modified between scan and dedupe?)\n");
-					exit_status = EXIT_FAILURE;
-				} else if (err != 0) {
-					fprintf(stderr, "%s (%d)\n", strerror(-err), err);
-					exit_status = EXIT_FAILURE;
-				} else if (errno != 0) {
-					fprintf(stderr, "%s (%d)\n", strerror(errno), errno);
-					exit_status = EXIT_FAILURE;
-				}
-			} else {
-				/* Dedupe OK; report to the user and add to file count */
-				printf("====> %s\n", dupefile->d_name);
-			}
-			close((int)fdri->dest_fd);
+		} else {
+			/* Dedupe OK; report to the user and add to file count */
+			printf("====> %s\n", dupefile->d_name);
 		}
-		printf("\n");
-		close(src_fd);
+		close((int)fdri->dest_fd);
 	}
 
 	free(fdr);
+	return;
+}
 #endif /* __linux__ */
-
-/* On macOS, clonefile() is basically a "hard link" function, so linkfiles will do the work. */
-#ifdef __APPLE__
-	linkfiles(files, 2, 0);
-#endif /* __APPLE__ */
-	return;
-}
-
-
-#ifdef ENABLE_CLONEFILE_LINK
-static void clonefile_error(const char * const restrict func, const char * const restrict name)
-{
-	fprintf(stderr, "warning: %s failed for destination file, reverting:\n-##-> ", func);
-	jc_fwprint(stderr,name, 1);
-	exit_status = EXIT_FAILURE;
-	return;
-}
-#endif /* ENABLE_CLONEFILE_LINK */
 
 
 static void revert_failed(const char * const restrict orig, const char * const restrict current)
@@ -151,7 +117,7 @@ static void revert_failed(const char * const restrict orig, const char * const r
 
 
 /* linktype: 0=symlink, 1=hardlink, 2=clonefile() */
-extern int jc_linkfiles(file_t **files, const int count, const int linktype)
+extern int jc_linkfiles(struct jc_fileinfo *files, const int count, const int linktype)
 {
 	int *srcfile;
 	file_t ** restrict dupelist;
@@ -266,7 +232,7 @@ extern int jc_linkfiles(file_t **files, const int count, const int linktype)
 			if (file_has_changed(dupelist[x])) {
 				fprintf(stderr, "warning: target file modified since scanned, not linking:\n-//-> ");
 				jc_fwprint(stderr, dupelist[x]->d_name, 1);
-			exit_status = EXIT_FAILURE;
+				exit_status = EXIT_FAILURE;
 				continue;
 			}
 #ifdef ON_WINDOWS

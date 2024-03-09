@@ -350,6 +350,14 @@ enum jc_e_hash { NORMAL, ROLLING };
 extern int jc_block_hash(enum jc_e_hash type, jodyhash_t *data, jodyhash_t *hash, const size_t count);
 
 
+/*** linkfiles ***/
+struct jc_fileinfo {
+	struct JC_STAT *stat;
+	JC_DIRENT *dirent;
+	int status;
+};
+
+
 /*** oom ***/
 
 /* Out-of-memory and null pointer error-exit functions */
