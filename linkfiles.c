@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "libjodycode.h"
+#include "likely_unlikely.h"
 
 /* Apple clonefile() is basically a hard link */
 #ifdef ENABLE_DEDUPE
@@ -32,35 +33,41 @@
  #define KERNEL_DEDUP_MAX_SIZE 16777216
 #endif /* __linux__ */
 
-void jc_dedupe(struct jc_fileinfo *file1, struct jc_fileinfo *file2)
+extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 {
 #ifdef __linux__
 	struct file_dedupe_range *fdr;
 	struct file_dedupe_range_info *fdri;
-	file_t *curfile, *curfile2, *dupefile;
+	struct jc_fileinfo *srcfile;
 	int src_fd;
 
-	fdr = (struct file_dedupe_range *)calloc(1, sizeof(struct file_dedupe_range) + sizeof(struct file_dedupe_range_info) + 1);
+	if (unlikely(batch == NULL || count < 2)) goto error_bad_params;
+
+	fdr = (struct file_dedupe_range *)calloc(1, sizeof(struct file_dedupe_range) + (sizeof(struct file_dedupe_range_info) * count));
 	fdr->dest_count = 1;
 	fdri = &fdr->info[0];
+	/* cherry-pick first file */
+	srcfile = &(batch->files[0]);
+	errno = 0;
+	src_fd = open(srcfile->dirent->d_name, O_RDONLY);
+	if (unlikely(src_fd < 0)) goto error_source;
+
 	/* Run dedupe for each set */
-	for (int i = 0; files[i]->status > 0; i++) {
+	for (unsigned int i = 1; i < count; i++) {
+		struct jc_fileinfo *curfile = &(batch->files[i]);
 		off_t remain;
 		int err;
 
-		/* TODO: cherry-pick first file */
-
 		/* Don't pass hard links to dedupe */
-		if (dupefile->device == curfile->device && dupefile->inode == curfile->inode) {
-			printf("-==-> %s\n", dupefile->d_name);
+		if (srcfile->stat->st_dev == curfile->stat->st_dev && srcfile->stat->st_ino == curfile->stat->st_ino) {
+			curfile->status = 0;
 			continue;
 		}
 
 		/* Open destination file, skipping any that fail */
-		fdri->dest_fd = open(dupefile->d_name, O_RDONLY);
+		fdri->dest_fd = open(curfile->dirent->d_name, O_RDONLY);
 		if (fdri->dest_fd == -1) {
-			fprintf(stderr, "dedupe: open failed (skipping): %s\n", dupefile->d_name);
-			exit_status = EXIT_FAILURE;
+			curfile->status = -1;
 			continue;
 		}
 
@@ -101,7 +108,14 @@ void jc_dedupe(struct jc_fileinfo *file1, struct jc_fileinfo *file2)
 	}
 
 	free(fdr);
-	return;
+	return 0;
+
+error_bad_params:
+	jc_errno = EFAULT;
+	return -1;
+error_source:
+	jc_errno = errno;
+	return -1;
 }
 #endif /* __linux__ */
 
