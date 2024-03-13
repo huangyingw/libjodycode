@@ -39,41 +39,42 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	struct file_dedupe_range *fdr;
 	struct file_dedupe_range_info *fdri;
 	struct jc_fileinfo *srcfile;
+	long max_files;
+	unsigned int i;
 	int src_fd;
 
 	if (unlikely(batch == NULL || count < 2)) goto error_bad_params;
 
-	fdr = (struct file_dedupe_range *)calloc(1, sizeof(struct file_dedupe_range) + (sizeof(struct file_dedupe_range_info) * count));
-	fdr->dest_count = 1;
-	fdri = &fdr->info[0];
+	max_files = sysconf(_SC_PAGESIZE);
+	if (unlikely(max_files < (long)sizeof(struct file_dedupe_range_info))) max_files = 1;
+	else max_files = sysconf(_SC_PAGESIZE) / (long)sizeof(struct file_dedupe_range_info);
+
+	fdr = (struct file_dedupe_range *)calloc(1, (size_t)((long)sizeof(struct file_dedupe_range) + ((long)sizeof(struct file_dedupe_range_info) * max_files)));
+
 	/* cherry-pick first file */
 	srcfile = &(batch->files[0]);
 	errno = 0;
 	src_fd = open(srcfile->dirent->d_name, O_RDONLY);
-	if (unlikely(src_fd < 0)) goto error_source;
+	if (unlikely(src_fd < 0)) goto error_fail_all;
 
-	/* Run dedupe for each set */
-	for (unsigned int i = 1; i < count; i++) {
+	/* Batch together all files for dedupe call */
+	for (i = 1; i < max_files; i++) {
 		struct jc_fileinfo *curfile = &(batch->files[i]);
-		off_t remain;
-		int err;
 
-		/* Don't pass hard links to dedupe */
-		if (srcfile->stat->st_dev == curfile->stat->st_dev && srcfile->stat->st_ino == curfile->stat->st_ino) {
-			curfile->status = 0;
-			continue;
-		}
+		/* Don't pass hard links or data on different devices to dedupe */
+		if (srcfile->stat->st_dev != curfile->stat->st_dev || srcfile->stat->st_ino == curfile->stat->st_ino)
+			goto error_fail_all;
 
 		/* Open destination file, skipping any that fail */
+		fdri = &(fdr->info[i]);
 		fdri->dest_fd = open(curfile->dirent->d_name, O_RDONLY);
-		if (fdri->dest_fd == -1) {
-			curfile->status = -1;
-			continue;
-		}
+		if (fdri->dest_fd == -1) goto error_fail_all;
+		fdri->status = FILE_DEDUPE_RANGE_SAME;
+		fdr->dest_count++;
 
 		/* Dedupe src <--> dest, 16 MiB or less at a time */
-		remain = dupefile->size;
-		fdri->status = FILE_DEDUPE_RANGE_SAME;
+		off_t remain;
+		remain = srcfile->stat->st_size;
 		/* Consume data blocks until no data remains */
 		while (remain) {
 			fdr->src_offset = (uint64_t)(dupefile->size - remain);
@@ -86,6 +87,7 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 		}
 
 		/* Handle any errors */
+		int err;
 		err = fdri->status;
 		if (err != FILE_DEDUPE_RANGE_SAME || errno != 0) {
 			printf("-XX-> %s\n", dupefile->d_name);
@@ -113,8 +115,9 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 error_bad_params:
 	jc_errno = EFAULT;
 	return -1;
-error_source:
+error_fail_all:
 	jc_errno = errno;
+	for (i = 0; i < count; i++) batch->files[i].status = -1;
 	return -1;
 }
 #endif /* __linux__ */
@@ -153,7 +156,7 @@ extern int jc_linkfiles(struct jc_fileinfo *files, const int count, const int li
 #endif
 
 
-	for (int i = 1; i < count; count++) {
+	for (i = 1; i < count; count++) {
 		/* Link every file to the first file */
 		if (linktype != 0) {
 #ifndef NO_HARDLINKS
