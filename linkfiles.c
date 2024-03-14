@@ -41,7 +41,7 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	struct jc_fileinfo *srcfile;
 	long max_files;
 	unsigned int i;
-	int src_fd;
+	int retval, src_fd = -1;
 
 	if (unlikely(batch == NULL || count < 2)) goto error_bad_params;
 
@@ -51,14 +51,17 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	max_files = sysconf(_SC_PAGESIZE);
 	if (unlikely(max_files < (long)sizeof(struct file_dedupe_range_info))) max_files = 1;
 	else max_files = sysconf(_SC_PAGESIZE) / (long)sizeof(struct file_dedupe_range_info);
+	if (count < max_files) max_files = count;
 
 	fdr = (struct file_dedupe_range *)calloc(1, (size_t)((long)sizeof(struct file_dedupe_range) + ((long)sizeof(struct file_dedupe_range_info) * max_files)));
+	if (unlikely(fdr == NULL)) goto error_oom;
+	for (i = 0; i < max_files; i++) fdr->info[i].dest_fd = -1;
 
 	/* cherry-pick first file */
 	srcfile = &(batch->files[0]);
 	errno = 0;
 	src_fd = open(srcfile->dirent->d_name, O_RDONLY);
-	if (unlikely(src_fd < 0)) goto error_fail_all;
+	if (unlikely(src_fd < 0)) goto error_with_errno;
 
 	/* Batch together all files for dedupe call */
 	for (i = 1; i < max_files; i++) {
@@ -66,12 +69,12 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 
 		/* Don't pass hard links or data on different devices to dedupe */
 		if (srcfile->stat->st_dev != curfile->stat->st_dev || srcfile->stat->st_ino == curfile->stat->st_ino)
-			goto error_fail_all;
+			goto error_hardlinked;
 
 		/* Opening the file is required to use ioctl_fideduperange */
 		fdri = &(fdr->info[i]);
 		fdri->dest_fd = open(curfile->dirent->d_name, O_RDONLY);
-		if (fdri->dest_fd == -1) goto error_fail_all;
+		if (fdri->dest_fd == -1) goto error_with_errno;
 		fdri->status = FILE_DEDUPE_RANGE_SAME;
 		fdr->dest_count++;
 
@@ -84,30 +87,48 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 			fdri->dest_offset = fdr->src_offset;
 			fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
 			errno = 0;
-			ioctl(src_fd, FIDEDUPERANGE, fdr);
-			if (fdri->status < 0) goto error_dedupe;
+			if (ioctl(src_fd, FIDEDUPERANGE, fdr) == -1) goto error_with_errno;
 			remain -= (off_t)fdr->src_length;
 		}
 
 		/* Handle any errors */
-		int err;
-		err = fdri->status;
-		if (err != FILE_DEDUPE_RANGE_SAME || errno != 0) goto error_dedupe;
+		if (fdri->status != FILE_DEDUPE_RANGE_SAME || errno != 0) goto error_dedupe;
 		close((int)fdri->dest_fd);
 	}
 
-	free(fdr);
-	return 0;
+	retval = 0;
+	goto cleanup;
 
+error_oom:
+	jc_errno = ENOMEM;
+	return -1;
 error_bad_params:
 	jc_errno = EFAULT;
 	return -1;
+error_hardlinked:
+	jc_errno = EMLINK;
+	retval = -1;
+	goto cleanup;
 error_dedupe:
 	jc_errno = EACCES;
-	return -1;
-error_fail_all:
+	retval = -1;
+	goto cleanup;
+error_with_errno:
 	jc_errno = errno;
 	return -1;
+
+cleanup:
+	if (src_fd >= 0) {
+		close(src_fd);
+		if (fdr != NULL) {
+			for (i = 0; i < count; i++) {
+				if (fdr->info[i].dest_fd >= 0)
+					close((int)fdr->info[i].dest_fd);
+			}
+			free(fdr);
+		}
+	}
+	return retval;
 }
 #endif /* __linux__ */
 
