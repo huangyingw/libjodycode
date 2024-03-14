@@ -45,6 +45,9 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 
 	if (unlikely(batch == NULL || count < 2)) goto error_bad_params;
 
+	/* All batch statuses default to general failure */
+	for (i = 0; i < count; i++) batch->files[i].status = ECANCELED;
+
 	max_files = sysconf(_SC_PAGESIZE);
 	if (unlikely(max_files < (long)sizeof(struct file_dedupe_range_info))) max_files = 1;
 	else max_files = sysconf(_SC_PAGESIZE) / (long)sizeof(struct file_dedupe_range_info);
@@ -65,7 +68,7 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 		if (srcfile->stat->st_dev != curfile->stat->st_dev || srcfile->stat->st_ino == curfile->stat->st_ino)
 			goto error_fail_all;
 
-		/* Open destination file, skipping any that fail */
+		/* Opening the file is required to use ioctl_fideduperange */
 		fdri = &(fdr->info[i]);
 		fdri->dest_fd = open(curfile->dirent->d_name, O_RDONLY);
 		if (fdri->dest_fd == -1) goto error_fail_all;
@@ -77,35 +80,19 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 		remain = srcfile->stat->st_size;
 		/* Consume data blocks until no data remains */
 		while (remain) {
-			fdr->src_offset = (uint64_t)(dupefile->size - remain);
+			fdr->src_offset = (uint64_t)(srcfile->stat->st_size - remain);
 			fdri->dest_offset = fdr->src_offset;
 			fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
 			errno = 0;
 			ioctl(src_fd, FIDEDUPERANGE, fdr);
-			if (fdri->status < 0) break;
+			if (fdri->status < 0) goto error_dedupe;
 			remain -= (off_t)fdr->src_length;
 		}
 
 		/* Handle any errors */
 		int err;
 		err = fdri->status;
-		if (err != FILE_DEDUPE_RANGE_SAME || errno != 0) {
-			printf("-XX-> %s\n", dupefile->d_name);
-			fprintf(stderr, "error: ");
-			if (err == FILE_DEDUPE_RANGE_DIFFERS) {
-				fprintf(stderr, "not identical (files modified between scan and dedupe?)\n");
-				exit_status = EXIT_FAILURE;
-			} else if (err != 0) {
-				fprintf(stderr, "%s (%d)\n", strerror(-err), err);
-				exit_status = EXIT_FAILURE;
-			} else if (errno != 0) {
-				fprintf(stderr, "%s (%d)\n", strerror(errno), errno);
-				exit_status = EXIT_FAILURE;
-			}
-		} else {
-			/* Dedupe OK; report to the user and add to file count */
-			printf("====> %s\n", dupefile->d_name);
-		}
+		if (err != FILE_DEDUPE_RANGE_SAME || errno != 0) goto error_dedupe;
 		close((int)fdri->dest_fd);
 	}
 
@@ -115,14 +102,16 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 error_bad_params:
 	jc_errno = EFAULT;
 	return -1;
+error_dedupe:
+	jc_errno = EACCES;
+	return -1;
 error_fail_all:
 	jc_errno = errno;
-	for (i = 0; i < count; i++) batch->files[i].status = -1;
 	return -1;
 }
 #endif /* __linux__ */
 
-
+#if 0
 static void revert_failed(const char * const restrict orig, const char * const restrict current)
 {
 	fprintf(stderr, "\nwarning: couldn't revert the file to its original name\n");
@@ -379,3 +368,5 @@ linkfile_loop:
 
 	return;
 }
+
+#endif // 0
