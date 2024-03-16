@@ -40,7 +40,7 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	struct file_dedupe_range_info *fdri;
 	struct jc_fileinfo *srcfile;
 	long max_files;
-	unsigned int i;
+	unsigned int i, j;
 	int retval, src_fd = -1;
 
 	if (unlikely(batch == NULL || count < 2)) goto error_bad_params;
@@ -55,7 +55,7 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 
 	fdr = (struct file_dedupe_range *)calloc(1, (size_t)((long)sizeof(struct file_dedupe_range) + ((long)sizeof(struct file_dedupe_range_info) * max_files)));
 	if (unlikely(fdr == NULL)) goto error_oom;
-	for (i = 0; i < max_files; i++) fdr->info[i].dest_fd = -1;
+	for (i = 1; i < max_files; i++) fdr->info[i].dest_fd = -1;
 
 	/* cherry-pick first file */
 	srcfile = &(batch->files[0]);
@@ -63,23 +63,24 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	src_fd = open(srcfile->dirent->d_name, O_RDONLY);
 	if (unlikely(src_fd < 0)) goto error_with_errno;
 
-	/* Batch together all files for dedupe call */
-	for (i = 1; i < max_files; i++) {
+	/* Run batches of files */
+	for (i = 1, j = 0; i < count; i++, j++) {
 		struct jc_fileinfo *curfile = &(batch->files[i]);
+		off_t remain;
 
 		/* Don't pass hard links or data on different devices to dedupe */
 		if (srcfile->stat->st_dev != curfile->stat->st_dev || srcfile->stat->st_ino == curfile->stat->st_ino)
 			goto error_hardlinked;
 
 		/* Opening the file is required to use ioctl_fideduperange */
-		fdri = &(fdr->info[i]);
+		fdri = &(fdr->info[j]);
 		fdri->dest_fd = open(curfile->dirent->d_name, O_RDONLY);
 		if (fdri->dest_fd == -1) goto error_with_errno;
 		fdri->status = FILE_DEDUPE_RANGE_SAME;
 		fdr->dest_count++;
 
+		/* FIXME: Redo this entire loop */
 		/* Dedupe src <--> dest, 16 MiB or less at a time */
-		off_t remain;
 		remain = srcfile->stat->st_size;
 		/* Consume data blocks until no data remains */
 		while (remain) {
