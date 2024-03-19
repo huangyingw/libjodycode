@@ -33,9 +33,10 @@
  #define KERNEL_DEDUP_MAX_SIZE 16777216
 #endif /* __linux__ */
 
+
+#ifdef __linux__
 extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 {
-#ifdef __linux__
 	struct file_dedupe_range *fdr;
 	struct file_dedupe_range_info *fdri;
 	struct jc_fileinfo *srcfile;
@@ -46,7 +47,15 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	if (unlikely(batch == NULL || count < 2)) goto error_bad_params;
 
 	/* All batch statuses default to general failure */
-	for (i = 0; i < count; i++) batch->files[i].status = ECANCELED;
+	for (i = 0; i < count; i++) {
+		batch->files[i].status = ECANCELED;
+		if (batch->files[i].dirent == NULL) goto error_bad_params;
+		if (batch->files[i].stat == NULL) {
+			batch->files[i].stat = malloc(sizeof(struct JC_STAT));
+			if (batch->files[i].stat == NULL) goto error_oom;
+			if (jc_stat(batch->files[i].dirent->d_name, batch->files[i].stat) != 0) goto error_bad_params;
+		}
+	}
 
 	max_files = sysconf(_SC_PAGESIZE);
 	if (unlikely(max_files < (long)sizeof(struct file_dedupe_range_info))) max_files = 1;
@@ -64,7 +73,7 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	if (unlikely(src_fd < 0)) goto error_with_errno;
 
 	/* Run batches of files */
-	for (i = 1, j = 0; i < count; i++, j++) {
+	for (i = 1, j = 0; i < count; i++) {
 		struct jc_fileinfo *curfile = &(batch->files[i]);
 		off_t remain;
 
@@ -74,27 +83,33 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 
 		/* Opening the file is required to use ioctl_fideduperange */
 		fdri = &(fdr->info[j]);
-		fdri->dest_fd = open(curfile->dirent->d_name, O_RDONLY);
+		fdri->dest_fd = open(curfile->dirent->d_name, O_RDWR);
 		if (fdri->dest_fd == -1) goto error_with_errno;
-		fdri->status = FILE_DEDUPE_RANGE_SAME;
 		fdr->dest_count++;
 
-		/* FIXME: Redo this entire loop */
-		/* Dedupe src <--> dest, 16 MiB or less at a time */
-		remain = srcfile->stat->st_size;
-		/* Consume data blocks until no data remains */
-		while (remain) {
-			fdr->src_offset = (uint64_t)(srcfile->stat->st_size - remain);
-			fdri->dest_offset = fdr->src_offset;
-			fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
-			errno = 0;
-			if (ioctl(src_fd, FIDEDUPERANGE, fdr) == -1) goto error_with_errno;
-			remain -= (off_t)fdr->src_length;
-		}
-
-		/* Handle any errors */
-		if (fdri->status != FILE_DEDUPE_RANGE_SAME || errno != 0) goto error_dedupe;
-		close((int)fdri->dest_fd);
+		/* Run batches once they're full */
+		if (j == max_files || count == (i + 1)) {
+			/* FIXME: Redo this entire loop */
+			/* Dedupe src <--> dest, 16 MiB or less at a time */
+			remain = srcfile->stat->st_size;
+			/* Consume data blocks until no data remains */
+			while (remain) {
+				fdr->src_offset = (uint64_t)(srcfile->stat->st_size - remain);
+				fdri->dest_offset = fdr->src_offset;
+				fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
+				errno = 0;
+				if (ioctl(src_fd, FIDEDUPERANGE, fdr) == -1) goto error_with_errno;
+				remain -= (off_t)fdr->src_length;
+			}
+			while (1) {
+				if (fdr->info[j].status != FILE_DEDUPE_RANGE_SAME) goto error_dedupe;
+				batch->files[i - j].status = 0;
+				close((int)fdr->info[j].dest_fd);
+				if (j == 0) break;
+				j--;
+			}
+			fdr->dest_count = 0;
+		} else j++;
 	}
 
 	retval = 0;
@@ -122,10 +137,9 @@ cleanup:
 	if (src_fd >= 0) {
 		close(src_fd);
 		if (fdr != NULL) {
-			for (i = 0; i < count; i++) {
+			for (i = 0; i < count; i++)
 				if (fdr->info[i].dest_fd >= 0)
 					close((int)fdr->info[i].dest_fd);
-			}
 			free(fdr);
 		}
 	}
