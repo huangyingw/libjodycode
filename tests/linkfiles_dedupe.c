@@ -8,7 +8,7 @@ int main(void)
 {
 	struct jc_fileinfo_batch *batch;
 	JC_DIRENT *dirents;
-	const int filecnt = 26;
+	const int filecnt = 28;
 
 	batch = calloc(1, sizeof(struct jc_fileinfo_batch) + (sizeof(struct jc_fileinfo) * filecnt));
 	dirents = calloc(1, (sizeof(JC_DIRENT) + 4) * filecnt);
@@ -43,6 +43,8 @@ int main(void)
 	strcpy(batch->files[23].dirent->d_name, "x");
 	strcpy(batch->files[24].dirent->d_name, "y");
 	strcpy(batch->files[25].dirent->d_name, "z");
+	strcpy(batch->files[26].dirent->d_name, "0");
+	strcpy(batch->files[27].dirent->d_name, "1");
 
 	if (jc_dedupe(batch, filecnt) != 0) printf("failure\n");
 	else printf("success\n");
