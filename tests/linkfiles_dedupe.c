@@ -46,7 +46,7 @@ int main(void)
 	strcpy(batch->files[26].dirent->d_name, "0");
 	strcpy(batch->files[27].dirent->d_name, "1");
 
-	if (jc_dedupe(batch, filecnt) != 0) printf("failure\n");
+	if (jc_dedupe(batch) != 0) printf("failure\n");
 	else printf("success\n");
 
 	free(dirents); free(batch);

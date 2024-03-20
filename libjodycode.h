@@ -363,7 +363,7 @@ struct jc_fileinfo_batch {
 };
 
 #ifdef __linux__
-extern int jc_dedupe(struct jc_fileinfo_batch *files, unsigned int count);
+extern int jc_dedupe(struct jc_fileinfo_batch *batch);
 #endif /* __linux__ */
 
 

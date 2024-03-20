@@ -35,19 +35,19 @@
 
 
 #ifdef __linux__
-extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
+extern int jc_dedupe(struct jc_fileinfo_batch * const restrict batch)
 {
 	struct file_dedupe_range *fdr;
 	struct file_dedupe_range_info *fdri;
 	struct jc_fileinfo *srcfile;
 	long max_files;
-	unsigned int i, j;
+	int i, j;
 	int retval, src_fd = -1;
 
-	if (unlikely(batch == NULL || count < 2)) goto error_bad_params;
+	if (unlikely(batch == NULL || batch->count < 2)) goto error_bad_params;
 
 	/* All batch statuses default to general failure */
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < batch->count; i++) {
 		batch->files[i].status = ECANCELED;
 		if (batch->files[i].dirent == NULL) goto error_bad_params;
 		if (batch->files[i].stat == NULL) {
@@ -60,7 +60,7 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	max_files = sysconf(_SC_PAGESIZE);
 	if (unlikely(max_files < (long)sizeof(struct file_dedupe_range_info))) max_files = 1;
 	else max_files = sysconf(_SC_PAGESIZE) / (long)sizeof(struct file_dedupe_range_info);
-	if (count < max_files) max_files = count;
+	if (batch->count < max_files) max_files = batch->count;
 
 	fdr = (struct file_dedupe_range *)calloc(1, (size_t)((long)sizeof(struct file_dedupe_range) + ((long)sizeof(struct file_dedupe_range_info) * max_files)));
 	if (unlikely(fdr == NULL)) goto error_oom;
@@ -73,7 +73,7 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 	if (unlikely(src_fd < 0)) goto error_with_errno;
 
 	/* Run batches of files */
-	for (i = 1, j = 0; i < count; i++) {
+	for (i = 1, j = 0; i < batch->count; i++) {
 		struct jc_fileinfo *curfile = &(batch->files[i]);
 		off_t remain;
 
@@ -88,11 +88,9 @@ extern int jc_dedupe(struct jc_fileinfo_batch *batch, unsigned int count)
 		fdr->dest_count++;
 
 		/* Run batches once they're full */
-		if (j == max_files || count == (i + 1)) {
-			/* FIXME: Redo this entire loop */
+		if (j == max_files || batch->count == (i + 1)) {
 			/* Dedupe src <--> dest, 16 MiB or less at a time */
 			remain = srcfile->stat->st_size;
-			/* Consume data blocks until no data remains */
 			while (remain) {
 				fdr->src_offset = (uint64_t)(srcfile->stat->st_size - remain);
 				fdri->dest_offset = fdr->src_offset;
@@ -137,7 +135,7 @@ cleanup:
 	if (src_fd >= 0) {
 		close(src_fd);
 		if (fdr != NULL) {
-			for (i = 0; i < count; i++)
+			for (i = 0; i < batch->count; i++)
 				if (fdr->info[i].dest_fd >= 0)
 					close((int)fdr->info[i].dest_fd);
 			free(fdr);
@@ -148,18 +146,8 @@ cleanup:
 #endif /* __linux__ */
 
 #if 0
-static void revert_failed(const char * const restrict orig, const char * const restrict current)
-{
-	fprintf(stderr, "\nwarning: couldn't revert the file to its original name\n");
-	fprintf(stderr, "original: "); jc_fwprint(stderr, orig, 1);
-	fprintf(stderr, "current:  "); jc_fwprint(stderr, current, 1);
-	exit_status = EXIT_FAILURE;
-	return;
-}
-
-
 /* linktype: 0=symlink, 1=hardlink, 2=clonefile() */
-extern int jc_linkfiles(struct jc_fileinfo *files, const int count, const int linktype)
+extern int jc_linkfiles(struct jc_fileinfo_batch *batch, const int linktype)
 {
 	int *srcfile;
 	file_t ** restrict dupelist;
