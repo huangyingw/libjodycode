@@ -11,137 +11,68 @@
 #include "likely_unlikely.h"
 
 /* Apple clonefile() is basically a hard link */
-#ifdef ENABLE_DEDUPE
- #ifdef __APPLE__
-  #include <sys/attr.h>
-  #include <copyfile.h>
-  #ifndef NO_CLONEFILE
-   #include <sys/clonefile.h>
-   #define ENABLE_CLONEFILE_LINK 1
-  #endif /* NO_CLONEFILE */
- #endif /* __APPLE__ */
-#endif /* ENABLE_DEDUPE */
+#ifdef __APPLE__
+ #include <sys/attr.h>
+ #include <copyfile.h>
+ #ifndef NO_CLONEFILE
+  #include <sys/clonefile.h>
+  #define ENABLE_CLONEFILE_LINK 1
+ #endif /* NO_CLONEFILE */
+#endif /* __APPLE__ */
 
 #ifdef __linux__
  /* Use built-in static dedupe header if requested */
- #if defined STATIC_DEDUPE_H || !defined FILE_DEDUPE_RANGE_SAME
-  #include "linux-dedupe-static.h"
- #else
-  #include <linux/fs.h>
+ #include <linux/fs.h>
+ #if defined STATIC_DEDUPE_H || !defined FICLONE
+  #define FICLONE _IOW(0x94, 9, int)
  #endif
  #include <sys/ioctl.h>
- #define KERNEL_DEDUP_MAX_SIZE 16777216
 #endif /* __linux__ */
 
 
 #ifdef __linux__
 extern int jc_dedupe(struct jc_fileinfo_batch * const restrict batch)
 {
-	struct file_dedupe_range *fdr;
-	struct file_dedupe_range_info *fdri;
-	struct jc_fileinfo *srcfile;
-	long max_files;
-	int i, j;
-	int retval, src_fd = -1;
+	int i, retval = 0, src_fd = -1, dest_fd = -1;
 
 	if (unlikely(batch == NULL || batch->count < 2)) goto error_bad_params;
 
 	/* All batch statuses default to general failure */
-	for (i = 0; i < batch->count; i++) {
+	for (i = 1; i < batch->count; i++) {
 		batch->files[i].status = ECANCELED;
-		if (batch->files[i].dirent == NULL) goto error_bad_params;
-		if (batch->files[i].stat == NULL) {
-			batch->files[i].stat = malloc(sizeof(struct JC_STAT));
-			if (batch->files[i].stat == NULL) goto error_oom;
-			if (jc_stat(batch->files[i].dirent->d_name, batch->files[i].stat) != 0) goto error_bad_params;
-		}
+		if (unlikely(batch->files[i].dirent == NULL)) goto error_bad_params;
 	}
 
-	max_files = sysconf(_SC_PAGESIZE);
-	if (unlikely(max_files < (long)sizeof(struct file_dedupe_range_info))) max_files = 1;
-	else max_files = sysconf(_SC_PAGESIZE) / (long)sizeof(struct file_dedupe_range_info);
-	if (batch->count < max_files) max_files = batch->count;
-
-	fdr = (struct file_dedupe_range *)calloc(1, (size_t)((long)sizeof(struct file_dedupe_range) + ((long)sizeof(struct file_dedupe_range_info) * max_files)));
-	if (unlikely(fdr == NULL)) goto error_oom;
-	for (i = 1; i < max_files; i++) fdr->info[i].dest_fd = -1;
-
-	/* cherry-pick first file */
-	srcfile = &(batch->files[0]);
 	errno = 0;
-	src_fd = open(srcfile->dirent->d_name, O_RDONLY);
+	src_fd = open(batch->files[0].dirent->d_name, O_RDONLY);
 	if (unlikely(src_fd < 0)) goto error_with_errno;
 
-	/* Run batches of files */
-	for (i = 1, j = 0; i < batch->count; i++) {
-		struct jc_fileinfo *curfile = &(batch->files[i]);
-		off_t remain;
-
-		/* Don't pass hard links or data on different devices to dedupe */
-		if (srcfile->stat->st_dev != curfile->stat->st_dev || srcfile->stat->st_ino == curfile->stat->st_ino)
-			goto error_hardlinked;
-
-		/* Opening the file is required to use ioctl_fideduperange */
-		fdri = &(fdr->info[j]);
-		fdri->dest_fd = open(curfile->dirent->d_name, O_RDWR);
-		if (fdri->dest_fd == -1) goto error_with_errno;
-		fdr->dest_count++;
-
-		/* Run batches once they're full */
-		if (j == max_files || batch->count == (i + 1)) {
-			/* Dedupe src <--> dest, 16 MiB or less at a time */
-			remain = srcfile->stat->st_size;
-			while (remain) {
-				fdr->src_offset = (uint64_t)(srcfile->stat->st_size - remain);
-				fdri->dest_offset = fdr->src_offset;
-				fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
-				errno = 0;
-				if (ioctl(src_fd, FIDEDUPERANGE, fdr) == -1) goto error_with_errno;
-				remain -= (off_t)fdr->src_length;
-			}
-			while (1) {
-				if (fdr->info[j].status != FILE_DEDUPE_RANGE_SAME) goto error_dedupe;
-				batch->files[i - j].status = 0;
-				close((int)fdr->info[j].dest_fd);
-				if (j == 0) break;
-				j--;
-			}
-			fdr->dest_count = 0;
-		} else j++;
+	for (i = 1; i < batch->count; i++) {
+		errno = 0;
+		dest_fd = open(batch->files[i].dirent->d_name, O_RDWR);
+		batch->files[i].status = errno;
+		if (unlikely(dest_fd < 0)) {
+			jc_errno = EIO;
+			retval = -1;
+			continue;
+		}
+		errno = 0;
+		if (ioctl(dest_fd, FICLONE, src_fd) == -1) {
+			jc_errno = EIO;
+			retval = -1;
+		}
+		batch->files[i].status = errno;
+		close(dest_fd);
 	}
+	close(src_fd);
+	return retval;
 
-	retval = 0;
-	goto cleanup;
-
-error_oom:
-	jc_errno = ENOMEM;
-	return -1;
 error_bad_params:
 	jc_errno = EFAULT;
 	return -1;
-error_hardlinked:
-	jc_errno = EMLINK;
-	retval = -1;
-	goto cleanup;
-error_dedupe:
-	jc_errno = EACCES;
-	retval = -1;
-	goto cleanup;
 error_with_errno:
 	jc_errno = errno;
 	return -1;
-
-cleanup:
-	if (src_fd >= 0) {
-		close(src_fd);
-		if (fdr != NULL) {
-			for (i = 0; i < batch->count; i++)
-				if (fdr->info[i].dest_fd >= 0)
-					close((int)fdr->info[i].dest_fd);
-			free(fdr);
-		}
-	}
-	return retval;
 }
 #endif /* __linux__ */
 
