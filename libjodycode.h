@@ -87,15 +87,22 @@ extern "C" {
 #endif /* ON_WINDOWS */
 
 
-/*** C standard library functions ***/
-
-/* For Windows: provide stat-style functionality */
+/*** time ***/
 #ifdef ON_WINDOWS
 struct JC_TIMESPEC {
 	time_t tv_sec;
 	long tv_nsec;
 };
+ extern int jc_nttime_to_unixtime(FILETIME *filetime, struct JC_TIMESPEC *unixtime);
+ extern int jc_unixtime_to_nttime(struct JC_TIMESPEC *unixtime, FILETIME *filetime);
+#else
+ #define JC_TIMESPEC timespec
+#endif  /* ON_WINDOWS */
 
+
+/*** stat ***/
+
+#ifdef ON_WINDOWS
 struct JC_STAT {
 	uint64_t st_ino;
 	int64_t st_size;
@@ -121,13 +128,9 @@ struct JC_STAT {
  #define JC_S_ISTEMP(st_mode) ((st_mode & FILE_ATTRIBUTE_TEMPORARY) ? 1 : 0)
  #define JC_S_ISREG(st_mode) ((st_mode & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ? 0 : 1)
  #define JC_S_ISLNK(st_mode) ((st_mode & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0)
-
- extern int jc_nttime_to_unixtime(uint64_t *nttime, struct JC_TIMESPEC *unixtime);
- extern int jc_unixtime_to_nttime(struct JC_TIMESPEC *unixtime, uint64_t *nttime);
 #else
  #include <sys/stat.h>
  #define JC_STAT stat
- #define JC_TIMESPEC timespec
  #define JC_S_ISARCHIVE(st_mode) 0
  #define JC_S_ISRO(st_mode) 0
  #define JC_S_ISHIDDEN(st_mode) 0
@@ -141,7 +144,6 @@ struct JC_STAT {
  #define JC_S_ISREG(st_mode) S_ISREG(st_mode)
  #define JC_S_ISLNK(st_mode) S_ISLNK(st_mode)
 #endif /* ON_WINDOWS */
-
 
 #if defined _WIN32 || defined __WIN32 || defined ON_WINDOWS
  #ifdef UNICODE
@@ -196,6 +198,10 @@ struct JC_STAT {
  #define JC_W_OK W_OK
  #define JC_X_OK X_OK
 #endif /* Windows */
+extern int jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
+
+
+/*** dir ***/
 
 /* Directory stream type
  * Must be hijacked because FindFirstFileW() does one readdir() equivalent too
@@ -253,20 +259,18 @@ typedef struct _JC_DIR_T {
   #define JC_DT_WHT DT_WHT
  #endif /* DT_UNKNOWN */
 #endif /* ON_WINDOWS */
+extern int jc_closedir(JC_DIR *dirp);
+extern JC_DIR *jc_opendir(const char * restrict path);
+extern JC_DIRENT *jc_readdir(JC_DIR *dirp);
 
-extern int32_t jc_errno;
 
 extern int        jc_access(const char *pathname, int mode);
-extern int        jc_closedir(JC_DIR *dirp);
 extern char      *jc_getcwd(char *pathname, size_t size);
 extern FILE      *jc_fopen(const char *pathname, const JC_WCHAR_T *mode);
 extern int        jc_link(const char *path1, const char *path2);
-extern JC_DIR    *jc_opendir(const char * restrict path);
 extern size_t     jc_get_d_namlen(JC_DIRENT *dirent);
-extern JC_DIRENT *jc_readdir(JC_DIR *dirp);
 extern int        jc_rename(const char *oldpath, const char *newpath);
 extern int        jc_remove(const char *pathname);
-extern int        jc_stat(const char * const filename, struct JC_STAT * const restrict buf);
 
 
 /*** alarm ***/
@@ -304,23 +308,26 @@ extern void jc_get_proc_cacheinfo(struct jc_proc_cacheinfo *pci);
 
 /*** error ***/
 
+extern int32_t jc_errno;
 extern const char *jc_get_errname(int errnum);
 extern const char *jc_get_errdesc(int errnum);
 extern int jc_print_error(int errnum);
 
-#define JC_ENOERROR   0
-#define JC_ENULL      1
-#define JC_EGETCWD    2
-#define JC_ECDOTDOT   3
-#define JC_EGRNEND    4
-#define JC_EBADERR    5
-#define JC_EBADARGV   6
-#define JC_EMBWC      7
-#define JC_EALARM     8
-#define JC_EALLOC     9
-#define JC_ENUMSTRCMP 10
-#define JC_EDATETIME  11
-#define JC_EWIN32API  12
+#define JC_ERRORCODE_START 1024
+
+#define JC_ENOERROR   1024
+#define JC_ENULL      1025
+#define JC_EGETCWD    1026
+#define JC_ECDOTDOT   1027
+#define JC_EGRNEND    1028
+#define JC_EBADERR    1029
+#define JC_EBADARGV   1030
+#define JC_EMBWC      1031
+#define JC_EALARM     1032
+#define JC_EALLOC     1033
+#define JC_ENUMSTRCMP 1034
+#define JC_EDATETIME  1035
+#define JC_EWIN32API  1036
 
 
 /*** jc_fwprint ***/
@@ -341,6 +348,14 @@ typedef uint64_t jodyhash_t;
 enum jc_e_hash { NORMAL, ROLLING };
 
 extern int jc_block_hash(enum jc_e_hash type, jodyhash_t *data, jodyhash_t *hash, const size_t count);
+
+
+/*** linkfiles ***/
+struct jc_fileinfo {
+	struct JC_STAT *stat;
+	JC_DIRENT *dirent;
+	int status;
+};
 
 
 /*** oom ***/
