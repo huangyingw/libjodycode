@@ -8,116 +8,77 @@
 #include <unistd.h>
 
 #include "libjodycode.h"
+#include "likely_unlikely.h"
 
 /* Apple clonefile() is basically a hard link */
-#ifdef ENABLE_DEDUPE
- #ifdef __APPLE__
-  #include <sys/attr.h>
-  #include <copyfile.h>
-  #ifndef NO_CLONEFILE
-   #include <sys/clonefile.h>
-   #define ENABLE_CLONEFILE_LINK 1
-  #endif /* NO_CLONEFILE */
- #endif /* __APPLE__ */
-#endif /* ENABLE_DEDUPE */
+#ifdef __APPLE__
+ #include <sys/attr.h>
+ #include <copyfile.h>
+ #ifndef NO_CLONEFILE
+  #include <sys/clonefile.h>
+  #define ENABLE_CLONEFILE_LINK 1
+ #endif /* NO_CLONEFILE */
+#endif /* __APPLE__ */
 
 #ifdef __linux__
  /* Use built-in static dedupe header if requested */
- #if defined STATIC_DEDUPE_H || !defined FILE_DEDUPE_RANGE_SAME
-  #include "linux-dedupe-static.h"
- #else
-  #include <linux/fs.h>
+ #include <linux/fs.h>
+ #if defined STATIC_DEDUPE_H || !defined FICLONE
+  #define FICLONE _IOW(0x94, 9, int)
  #endif
  #include <sys/ioctl.h>
- #define KERNEL_DEDUP_MAX_SIZE 16777216
 #endif /* __linux__ */
 
-void jc_dedupe(struct jc_fileinfo *file1, struct jc_fileinfo *file2)
-{
+
 #ifdef __linux__
-	struct file_dedupe_range *fdr;
-	struct file_dedupe_range_info *fdri;
-	file_t *curfile, *curfile2, *dupefile;
-	int src_fd;
+extern int jc_dedupe(struct jc_fileinfo_batch * const restrict batch)
+{
+	int i, retval = 0, src_fd = -1, dest_fd = -1;
 
-	fdr = (struct file_dedupe_range *)calloc(1, sizeof(struct file_dedupe_range) + sizeof(struct file_dedupe_range_info) + 1);
-	fdr->dest_count = 1;
-	fdri = &fdr->info[0];
-	/* Run dedupe for each set */
-	for (int i = 0; files[i]->status > 0; i++) {
-		off_t remain;
-		int err;
+	if (unlikely(batch == NULL || batch->count < 2)) goto error_bad_params;
 
-		/* TODO: cherry-pick first file */
-
-		/* Don't pass hard links to dedupe */
-		if (dupefile->device == curfile->device && dupefile->inode == curfile->inode) {
-			printf("-==-> %s\n", dupefile->d_name);
-			continue;
-		}
-
-		/* Open destination file, skipping any that fail */
-		fdri->dest_fd = open(dupefile->d_name, O_RDONLY);
-		if (fdri->dest_fd == -1) {
-			fprintf(stderr, "dedupe: open failed (skipping): %s\n", dupefile->d_name);
-			exit_status = EXIT_FAILURE;
-			continue;
-		}
-
-		/* Dedupe src <--> dest, 16 MiB or less at a time */
-		remain = dupefile->size;
-		fdri->status = FILE_DEDUPE_RANGE_SAME;
-		/* Consume data blocks until no data remains */
-		while (remain) {
-			fdr->src_offset = (uint64_t)(dupefile->size - remain);
-			fdri->dest_offset = fdr->src_offset;
-			fdr->src_length = (uint64_t)(remain <= KERNEL_DEDUP_MAX_SIZE ? remain : KERNEL_DEDUP_MAX_SIZE);
-			errno = 0;
-			ioctl(src_fd, FIDEDUPERANGE, fdr);
-			if (fdri->status < 0) break;
-			remain -= (off_t)fdr->src_length;
-		}
-
-		/* Handle any errors */
-		err = fdri->status;
-		if (err != FILE_DEDUPE_RANGE_SAME || errno != 0) {
-			printf("-XX-> %s\n", dupefile->d_name);
-			fprintf(stderr, "error: ");
-			if (err == FILE_DEDUPE_RANGE_DIFFERS) {
-				fprintf(stderr, "not identical (files modified between scan and dedupe?)\n");
-				exit_status = EXIT_FAILURE;
-			} else if (err != 0) {
-				fprintf(stderr, "%s (%d)\n", strerror(-err), err);
-				exit_status = EXIT_FAILURE;
-			} else if (errno != 0) {
-				fprintf(stderr, "%s (%d)\n", strerror(errno), errno);
-				exit_status = EXIT_FAILURE;
-			}
-		} else {
-			/* Dedupe OK; report to the user and add to file count */
-			printf("====> %s\n", dupefile->d_name);
-		}
-		close((int)fdri->dest_fd);
+	/* All batch statuses default to general failure */
+	for (i = 1; i < batch->count; i++) {
+		batch->files[i].status = ECANCELED;
+		if (unlikely(batch->files[i].dirent == NULL)) goto error_bad_params;
 	}
 
-	free(fdr);
-	return;
+	errno = 0;
+	src_fd = open(batch->files[0].dirent->d_name, O_RDONLY);
+	if (unlikely(src_fd < 0)) goto error_with_errno;
+
+	for (i = 1; i < batch->count; i++) {
+		errno = 0;
+		dest_fd = open(batch->files[i].dirent->d_name, O_RDWR);
+		batch->files[i].status = errno;
+		if (unlikely(dest_fd < 0)) {
+			jc_errno = EIO;
+			retval = -1;
+			continue;
+		}
+		errno = 0;
+		if (ioctl(dest_fd, FICLONE, src_fd) == -1) {
+			jc_errno = EIO;
+			retval = -1;
+		}
+		batch->files[i].status = errno;
+		close(dest_fd);
+	}
+	close(src_fd);
+	return retval;
+
+error_bad_params:
+	jc_errno = EFAULT;
+	return -1;
+error_with_errno:
+	jc_errno = errno;
+	return -1;
 }
 #endif /* __linux__ */
 
-
-static void revert_failed(const char * const restrict orig, const char * const restrict current)
-{
-	fprintf(stderr, "\nwarning: couldn't revert the file to its original name\n");
-	fprintf(stderr, "original: "); jc_fwprint(stderr, orig, 1);
-	fprintf(stderr, "current:  "); jc_fwprint(stderr, current, 1);
-	exit_status = EXIT_FAILURE;
-	return;
-}
-
-
+#if 0
 /* linktype: 0=symlink, 1=hardlink, 2=clonefile() */
-extern int jc_linkfiles(struct jc_fileinfo *files, const int count, const int linktype)
+extern int jc_linkfiles(struct jc_fileinfo_batch *batch, const int linktype)
 {
 	int *srcfile;
 	file_t ** restrict dupelist;
@@ -139,7 +100,7 @@ extern int jc_linkfiles(struct jc_fileinfo *files, const int count, const int li
 #endif
 
 
-	for (int i = 1; i < count; count++) {
+	for (i = 1; i < count; count++) {
 		/* Link every file to the first file */
 		if (linktype != 0) {
 #ifndef NO_HARDLINKS
@@ -362,3 +323,5 @@ linkfile_loop:
 
 	return;
 }
+
+#endif // 0

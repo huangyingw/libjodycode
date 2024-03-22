@@ -211,7 +211,7 @@ typedef struct _JC_DIRENT_T {
 	uint64_t d_ino;
 	uint32_t d_namlen;  /* we already do a strlen() so may as well pass it on */
 	unsigned char d_type;
-	char d_name[1];
+	char d_name[];
 } JC_DIRENT;
 
 typedef struct _JC_DIR_T {
@@ -356,6 +356,15 @@ struct jc_fileinfo {
 	JC_DIRENT *dirent;
 	int status;
 };
+
+struct jc_fileinfo_batch {
+	int count;
+	struct jc_fileinfo files[];
+};
+
+#ifdef __linux__
+extern int jc_dedupe(struct jc_fileinfo_batch *batch);
+#endif /* __linux__ */
 
 
 /*** oom ***/
