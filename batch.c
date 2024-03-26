@@ -27,18 +27,15 @@ extern struct jc_fileinfo_batch *jc_fileinfo_batch_alloc(const int filecnt, int 
 	if (stat != 0) {
 		stats = calloc(1, (size_t)(((int)sizeof(struct JC_STAT) * filecnt)));
 		if (stats == NULL) goto error_cleanup;
+		for (i = 0; i < filecnt; i++)
+			batch->files[i].stat = (struct JC_STAT *)((uintptr_t)stats + (uintptr_t)(((int)sizeof(struct JC_STAT) * i)));
 	}
 	if (namlen != 0) {
 		dirents = calloc(1, (size_t)(((int)sizeof(JC_DIRENT) + namlen) * filecnt));
 		if (dirents == NULL) goto error_cleanup;
-	}
-
-	if (stat != 0)
-		for (i = 0; i < filecnt; i++)
-			batch->files[i].stat = (struct JC_STAT *)((uintptr_t)stats + (uintptr_t)(((int)sizeof(struct JC_STAT) * i)));
-	if (namlen != 0)
 		for (i = 0; i < filecnt; i++)
 			batch->files[i].dirent = (JC_DIRENT *)((uintptr_t)dirents + (uintptr_t)(((int)sizeof(JC_DIRENT) + namlen) * i));
+	}
 
 	return batch;
 
