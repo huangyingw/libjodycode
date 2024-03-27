@@ -280,6 +280,23 @@ extern int jc_start_alarm(const unsigned int seconds, const int repeat);
 extern int jc_stop_alarm(void);
 
 
+/*** batch ***/
+
+struct jc_fileinfo {
+	struct JC_STAT *stat;
+	JC_DIRENT *dirent;
+	int status;
+};
+
+struct jc_fileinfo_batch {
+	int count;
+	struct jc_fileinfo files[];
+};
+
+extern struct jc_fileinfo_batch *jc_fileinfo_batch_alloc(const int filecnt, int stat, int namlen);
+extern void jc_fileinfo_batch_free(struct jc_fileinfo_batch *batch);
+
+
 /*** cacheinfo ***/
 
 /* Don't use cacheinfo on anything but Linux for now */
@@ -351,16 +368,6 @@ extern int jc_block_hash(enum jc_e_hash type, jodyhash_t *data, jodyhash_t *hash
 
 
 /*** linkfiles ***/
-struct jc_fileinfo {
-	struct JC_STAT *stat;
-	JC_DIRENT *dirent;
-	int status;
-};
-
-struct jc_fileinfo_batch {
-	int count;
-	struct jc_fileinfo files[];
-};
 
 #ifdef __linux__
 extern int jc_dedupe(struct jc_fileinfo_batch *batch);
